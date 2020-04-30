@@ -89,3 +89,6 @@ class Solution:
     def isOptimal(self) -> bool:
         # TODO: fill in
         return False
+
+    def solveTime(self) -> float:
+        return self.solveTimeSec
