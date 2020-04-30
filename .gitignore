@@ -2,10 +2,13 @@
 # IDE settings folders
 .idea/
 .vscode/
+venv/
 
 # Data files
-results.log
+#results.log
 
 # Compiled files
 *.class
 */__pycache__/
+
+local/
