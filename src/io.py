@@ -1,26 +1,5 @@
 import math
-
-
-class Node:
-    def __init__(self, demand, xPos, yPos):
-        self.demand = demand
-        self.x = xPos
-        self.y = yPos
-
-    def distance(self, otherNode):
-        return math.sqrt((self.x - otherNode.x) ** 2 + (self.y - otherNode.y) ** 2)
-
-
-class Problem:
-    def __init__(self, numCustomers, numTrucks, truckCapacity):
-        self.numCustomers = numCustomers
-        self.numTrucks = numTrucks
-        self.truckCapacity = truckCapacity
-
-        self.nodes = []
-
-    def addNode(self, node):
-        self.nodes.append(node)
+from problem import Problem, Node, Solution
 
 
 def readInput(file):
@@ -36,3 +15,23 @@ def readInput(file):
             problem.addNode(node)
 
     return problem
+
+
+def printSolution(solution, file=None):
+    lines = []
+    # add solution header (objective value, is optimal?)
+    lines.append(f"{solution.objectiveValue()} {int(solution.isOptimal())}")
+    # add route solutions
+    for route in solution.routes:
+        routeNodeIds = [node.id for node in route.stops]
+        lines.append(f"0 {' '.join(routeNodeIds)} 0")
+
+    # either write to file or print to command line
+    if file:
+        with open(file, mode="w") as solFile:
+            solFile.writelines(lines)
+    else:
+        print(f"Instance: {solution.problem.file}"
+              f" Time: {solution.solveTimeSec}"
+              f" Result: {solution.objectiveValue()}"
+              f" Solution {int(solution.isOptimal())} {' '.join(lines[1:])}")
