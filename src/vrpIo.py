@@ -46,6 +46,6 @@ def printSolution(solution: Solution) -> None:
     lines: List[str] = formatSolution(solution)
 
     print(f"Instance: {solution.problem.file}"
-          f" Time: {solution.solveTimeSec:.2f}"
+          f" Time: {solution.solveTime():.2f}"
           f" Result: {solution.objectiveValue():.2f}"
           f" Solution {int(solution.isOptimal())} {' '.join(lines[1:])}")
