@@ -47,7 +47,7 @@ def printSolution(solution: Solution) -> None:
 
     print(f"Instance: {solution.problem.file}"
           f" Time: {solution.solveTimeSec:.2f}"
-          f" Result: {solution.objectiveValue()}"
+          f" Result: {solution.objectiveValue():.2f}"
           f" Solution {int(solution.isOptimal())} {' '.join(lines[1:])}")
 
 
