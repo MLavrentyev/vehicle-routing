@@ -23,11 +23,15 @@ class Node:
 
 
 class Route:
-    def __init__(self):
-        self.stops: List[Node] = []
+    def __init__(self, stops: List[Node] = []):
+        self.stops: List[Node] = stops
 
     def __str__(self) -> str:
-        return f"0 {' '.join([str(n) for n in self.stops])} 0"
+        nodeIds: List[str] = [str(n) for n in self.stops]
+        if nodeIds:
+            return f"0 {' '.join(nodeIds)} 0"
+        else:
+            return "0 0"
 
     def __repr__(self) -> str:
         return f"(Route {str(self.stops)})"
@@ -58,7 +62,7 @@ class Problem:
 
 class Solution:
     def __init__(self, problem: Problem, routes: List[Route], solveTimeSec: float):
-        assert solveTime >= 0
+        assert solveTimeSec >= 0
         assert len(routes) == problem.numTrucks  # every truck has a route
 
         self.solveTimeSec: float = solveTimeSec

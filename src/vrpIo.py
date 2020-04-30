@@ -1,6 +1,6 @@
 from typing import List
 import math
-from problem import Problem, Node, Solution
+from problem import Problem, Node, Route, Solution
 
 
 def readInput(file: str) -> Problem:
@@ -36,19 +36,22 @@ def formatSolution(solution: Solution) -> List[str]:
 
 def writeSolutionToFile(solution: Solution, file: str) -> None:
     lines: List[str] = formatSolution(solution)
+    text: str = "\n".join(lines)
 
     with open(file, mode="w") as solFile:
-        solFile.writelines(lines)
+        solFile.writelines(text)
 
 
 def printSolution(solution: Solution) -> None:
     lines: List[str] = formatSolution(solution)
 
     print(f"Instance: {solution.problem.file}"
-          f" Time: {solution.solveTimeSec}"
+          f" Time: {solution.solveTimeSec:.2f}"
           f" Result: {solution.objectiveValue()}"
           f" Solution {int(solution.isOptimal())} {' '.join(lines[1:])}")
 
 
 if __name__ == "__main__":
-    print(readInput("../simpleInput/5_4_10.vrp"))
+    problem = readInput("../simpleInput/5_4_10.vrp")
+    print(problem)
+    writeSolutionToFile(Solution(problem, [Route([1, 2]), Route([2, 3]), Route([]), Route([])], 12.355632), "test.sol")
