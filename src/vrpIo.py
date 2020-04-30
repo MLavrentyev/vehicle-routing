@@ -49,9 +49,3 @@ def printSolution(solution: Solution) -> None:
           f" Time: {solution.solveTimeSec:.2f}"
           f" Result: {solution.objectiveValue():.2f}"
           f" Solution {int(solution.isOptimal())} {' '.join(lines[1:])}")
-
-
-if __name__ == "__main__":
-    problem = readInput("../simpleInput/5_4_10.vrp")
-    print(problem)
-    writeSolutionToFile(Solution(problem, [Route([1, 2]), Route([2, 3]), Route([]), Route([])], 12.355632), "test.sol")
