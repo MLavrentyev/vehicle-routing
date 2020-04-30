@@ -1,3 +1,4 @@
+from typing import List
 import math
 import itertools
 
@@ -8,7 +9,7 @@ class Node:
         self.x: float = xPos
         self.y: float = yPos
 
-    def __eq__(self, other: Node) -> bool:
+    def __eq__(self, other) -> bool:
         return self.demand == other.demand and self.x == other.x and self.y == other.y
 
     def __str__(self):
@@ -17,7 +18,7 @@ class Node:
     def __repr__(self):
         return f"(Node{self.id} <{self.x}, {self.y}>, {self.demand})"
 
-    def distance(self, otherNode: Node) -> float:
+    def distance(self, otherNode) -> float:
         return math.sqrt((self.x - otherNode.x) ** 2 + (self.y - otherNode.y) ** 2)
 
 

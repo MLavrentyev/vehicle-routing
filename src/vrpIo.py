@@ -1,3 +1,4 @@
+from typing import List
 import math
 from problem import Problem, Node, Solution
 
@@ -6,17 +7,18 @@ def readInput(file: str) -> Problem:
     with open(file, mode="r") as vrpFile:
         # read header in
         header: List[int] = [int(arg) for arg in vrpFile.readline().strip().split()]
-        depotLine: List[str] = vrpFile.readline()
+        depotLine: List[str] = vrpFile.readline().strip().split()
         depotNode: Node = Node(0, int(depotLine[0]), float(depotLine[1]), float(depotLine[2]))
-        problem: Problem = Problem(header[0], header[1], header[2])
+        problem: Problem = Problem(header[0], header[1], header[2], depotNode, file)
 
         # read node locations in
         nextId: int = 1
         for line in vrpFile.readlines():
             values: List[str] = line.strip().split()
-            node: Node = Node(nextId, int(values[0]), float(values[1]), float(values[2]))
-            problem.addNode(node)
-            nextId += 1
+            if values:
+                node: Node = Node(nextId, int(values[0]), float(values[1]), float(values[2]))
+                problem.addNode(node)
+                nextId += 1
 
     return problem
 
@@ -47,3 +49,6 @@ def printSolution(solution: Solution) -> None:
           f" Result: {solution.objectiveValue()}"
           f" Solution {int(solution.isOptimal())} {' '.join(lines[1:])}")
 
+
+if __name__ == "__main__":
+    print(readInput("../simpleInput/5_4_10.vrp"))
