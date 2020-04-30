@@ -2,36 +2,48 @@ import math
 from problem import Problem, Node, Solution
 
 
-def readInput(file):
+def readInput(file: str) -> Problem:
     with open(file, mode="r") as vrpFile:
         # read header in
-        header = [int(arg) for arg in vrpFile.readline().strip().split()]
-        problem = Problem(header[0], header[1], header[2])
+        header: List[int] = [int(arg) for arg in vrpFile.readline().strip().split()]
+        depotLine: List[str] = vrpFile.readline()
+        depotNode: Node = Node(0, int(depotLine[0]), float(depotLine[1]), float(depotLine[2]))
+        problem: Problem = Problem(header[0], header[1], header[2])
 
         # read node locations in
+        nextId: int = 1
         for line in vrpFile.readlines():
-            values = line.strip().split()
-            node = Node(int(values[0]), float(values[1]), float(values[2]))
+            values: List[str] = line.strip().split()
+            node: Node = Node(nextId, int(values[0]), float(values[1]), float(values[2]))
             problem.addNode(node)
+            nextId += 1
 
     return problem
 
 
-def printSolution(solution, file=None):
+def formatSolution(solution: Solution) -> List[str]:
     lines = []
     # add solution header (objective value, is optimal?)
     lines.append(f"{solution.objectiveValue()} {int(solution.isOptimal())}")
     # add route solutions
     for route in solution.routes:
-        routeNodeIds = [node.id for node in route.stops]
-        lines.append(f"0 {' '.join(routeNodeIds)} 0")
+        lines.append(str(route))
 
-    # either write to file or print to command line
-    if file:
-        with open(file, mode="w") as solFile:
-            solFile.writelines(lines)
-    else:
-        print(f"Instance: {solution.problem.file}"
-              f" Time: {solution.solveTimeSec}"
-              f" Result: {solution.objectiveValue()}"
-              f" Solution {int(solution.isOptimal())} {' '.join(lines[1:])}")
+    return lines
+
+
+def writeSolutionToFile(solution: Solution, file: str) -> None:
+    lines: List[str] = formatSolution(solution)
+
+    with open(file, mode="w") as solFile:
+        solFile.writelines(lines)
+
+
+def printSolution(solution: Solution) -> None:
+    lines: List[str] = formatSolution(solution)
+
+    print(f"Instance: {solution.problem.file}"
+          f" Time: {solution.solveTimeSec}"
+          f" Result: {solution.objectiveValue()}"
+          f" Solution {int(solution.isOptimal())} {' '.join(lines[1:])}")
+
