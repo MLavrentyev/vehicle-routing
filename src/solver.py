@@ -86,7 +86,7 @@ def runMultiProcSolver(solverFactory: Callable[[], Solver], numProcs: int = mult
 
 if __name__ == "__main__":
     problem: Problem = vrpIo.readInput(sys.argv[1])
-    solution: Solution = runMultiProcSolver(...)
+    solution: Solution = runMultiProcSolver(VRPSolver.factory)
 
     if len(sys.argv) == 4 and sys.argv[2] == "-f":
         vrpIo.writeSolutionToFile(solution, sys.argv[3])
