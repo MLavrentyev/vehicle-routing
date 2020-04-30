@@ -4,12 +4,13 @@ import itertools
 
 
 class Node:
-    def __init__(self, id: int, demand: int, xPos: float, yPos: float):
+    def __init__(self, nodeId: int, demand: int, xPos: float, yPos: float):
+        self.id = nodeId
         self.demand: int = demand
         self.x: float = xPos
         self.y: float = yPos
 
-    def __eq__(self, other) -> bool:
+    def __eq__(self, otherNode) -> bool:
         return self.demand == other.demand and self.x == other.x and self.y == other.y
 
     def __str__(self):
@@ -23,8 +24,8 @@ class Node:
 
 
 class Route:
-    def __init__(self, stops: List[Node] = []):
-        self.stops: List[Node] = stops
+    def __init__(self, stops: List[Node] = None):
+        self.stops: List[Node] = stops if stops else []
 
     def __str__(self) -> str:
         nodeIds: List[str] = [str(n) for n in self.stops]
@@ -38,6 +39,15 @@ class Route:
 
     def addStop(self, node: Node) -> None:
         self.stops.append(node)
+
+    def distance(self, depot: Node) -> float:
+        dist: float = 0
+        prevNode: Node = depot
+
+        for nextNode in self.stops + [depot]:
+            dist += prevNode.distance(nextNode)
+
+        return dist
 
 
 class Problem:
@@ -69,9 +79,12 @@ class Solution:
         self.problem: Problem = problem
         self.routes: List[Route] = routes
 
-    def objectiveValue(self) -> int:
-        # TODO: fill in
-        return 0
+    def objectiveValue(self) -> float:
+        totalDist: float = 0
+        for route in self.routes:
+            totalDist += route.distance(self.problem.depotNode)
+
+        return totalDist
 
     def isOptimal(self) -> bool:
         # TODO: fill in
