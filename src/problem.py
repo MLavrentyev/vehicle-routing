@@ -1,6 +1,15 @@
 from typing import List
+from abc import ABC
 import math
 import itertools
+
+
+class Problem(ABC):
+    pass
+
+
+class Solution(ABC):
+    pass
 
 
 class Node:
@@ -50,7 +59,7 @@ class Route:
         return dist
 
 
-class Problem:
+class VRPProblem(Problem):
     def __init__(self, numCustomers: int, numTrucks: int, truckCapacity: int, depotNode: Node, file: str = None):
         assert depotNode.demand == 0
 
@@ -70,7 +79,7 @@ class Problem:
         self.nodes.append(node)
 
 
-class Solution:
+class VRPSolution(Solution):
     def __init__(self, problem: Problem, routes: List[Route], solveTimeSec: float):
         assert solveTimeSec >= 0
         assert len(routes) == problem.numTrucks  # every truck has a route
