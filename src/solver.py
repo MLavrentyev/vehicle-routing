@@ -1,6 +1,7 @@
-from typing import List, Callable, Generator, Tuple
+from typing import cast, List, Callable, Generator, Tuple
 from abc import ABC, abstractmethod
 from multiprocessing import Process, Queue, cpu_count
+from queue import Empty
 import sys
 import time
 
@@ -26,7 +27,7 @@ class Solver(ABC):
         pass
 
     @abstractmethod
-    def neighborhood(self, solution: Solution) -> Generator[Solution]:
+    def neighborhood(self, solution: Solution) -> Generator[Solution, None, None]:
         pass
 
     @abstractmethod
@@ -49,7 +50,7 @@ def initSolverProcs(solverFactory: Callable[[Problem, float], Solver], numSolver
     return solvers, solverProcs
 
 
-def runMultiProcSolver(solverFactory: Callable[[], Solver], problem: Problem, numProcs: int = cpu_count()) -> Solution:
+def runMultiProcSolver(solverFactory: Callable[[Problem, float], Solver], problem: Problem, numProcs: int = cpu_count()) -> Solution:
     queueConn: Queue = Queue()
     startTime: float = time.time()
 
@@ -87,7 +88,7 @@ def runMultiProcSolver(solverFactory: Callable[[], Solver], problem: Problem, nu
 
 if __name__ == "__main__":
     problem: VRPProblem = vrpIo.readInput(sys.argv[1])
-    solution: Solution = runMultiProcSolver(VRPSolver.factory, problem)
+    solution: VRPSolution = cast(VRPSolution, runMultiProcSolver(VRPSolver.factory, problem))
 
     if len(sys.argv) == 4 and sys.argv[2] == "-f":
         vrpIo.writeSolutionToFile(solution, sys.argv[3])
