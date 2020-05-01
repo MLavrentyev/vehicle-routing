@@ -20,7 +20,7 @@ class Node:
         self.y: float = yPos
 
     def __eq__(self, otherNode) -> bool:
-        return self.demand == other.demand and self.x == other.x and self.y == other.y
+        return self.demand == otherNode.demand and self.x == otherNode.x and self.y == otherNode.y
 
     def __str__(self):
         return str(self.id)
@@ -80,12 +80,12 @@ class VRPProblem(Problem):
 
 
 class VRPSolution(Solution):
-    def __init__(self, problem: Problem, routes: List[Route], solveTimeSec: float):
+    def __init__(self, problem: VRPProblem, routes: List[Route], solveTimeSec: float):
         assert solveTimeSec >= 0
         assert len(routes) == problem.numTrucks  # every truck has a route
 
         self.solveTimeSec: float = solveTimeSec
-        self.problem: Problem = problem
+        self.problem: VRPProblem = problem
         self.routes: List[Route] = routes
 
     def objectiveValue(self) -> float:
