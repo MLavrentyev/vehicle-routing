@@ -1,0 +1,2 @@
+typing==3.7.4
+cached_property==1.5.1
