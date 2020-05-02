@@ -59,6 +59,10 @@ class Route:
 
         return dist
 
+    @property
+    def demand(self):
+        return sum([stop.demand for stop in self.stops])
+
 
 class VRPProblem(Problem):
     def __init__(self, numCustomers: int, numTrucks: int, truckCapacity: int, depotNode: Node, file: str = None):
@@ -89,10 +93,23 @@ class VRPSolution(Solution):
 
     @property
     def objectiveValue(self) -> float:
-        totalDist: float = sum([route.distance(self.problem.depotNode) for route in self.routes])
-        infeasiblePenalty: float = 0 # TODO: fill this in
+        #TODO: may need different multiplier for capOverflow infeasibility penalty
+        infeasiblePenalty: float =  self.capacityOverflow
 
-        return totalDist - infeasiblePenalty
+        return -(self.distance + infeasiblePenalty)
+
+    @property
+    def distance(self) -> float:
+        return sum([route.distance(self.problem.depotNode) for route in self.routes])
+
+    @property
+    def capacityOverflow(self) -> float:
+        capOverflow: float = 0
+        for rte in self.routes:
+            demandSupplyDiff = rte.demand - self.problem.truckCapacity
+            capOverflow += demandSupplyDiff if demandSupplyDiff > 0 else 0
+
+        return capOverflow
 
     @property
     def isOptimal(self) -> bool:
