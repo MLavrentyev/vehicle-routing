@@ -4,6 +4,7 @@ from multiprocessing import Process, Queue, cpu_count
 from queue import Empty
 import sys
 import time
+import random
 
 import vrpIo
 from problem import Problem, VRPProblem, Solution, VRPSolution
@@ -52,10 +53,20 @@ class VRPSolver(Solver):
         solution = cast(VRPSolution, solution)
         yield solution # TODO: fill in
 
-    @staticmethod
-    def pickInitSolution() -> VRPSolution:
-        # TODO: fill in
-        pass
+    def pickInitSolution(self) -> VRPSolution:
+        problem = cast(VRPProblem, self.problem)
+
+        nodes = copy(problem.nodes)
+        random.shuffle(nodes)
+
+        routes = []
+        startIdx = 0
+        for _ in range(problem.numCustomers):
+            endIdx = random.randint(0, problem.numCustomers - startIdx)
+            routes.append(nodes[startIdx:endIdx])
+            startIdx = endIdx
+
+        return VRPSolution(problem, routes)
 
 
 def initSolverProcs(solverFactory: Callable[[Problem], Solver], numSolvers: int, factoryArgs: Tuple = ()) -> Tuple[List[Solver], List[Process]]:
