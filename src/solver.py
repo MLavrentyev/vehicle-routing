@@ -7,7 +7,7 @@ import time
 import random
 
 import vrpIo
-from problem import Problem, VRPProblem, Solution, VRPSolution
+from problem import Route, Problem, VRPProblem, Solution, VRPSolution
 
 
 
@@ -34,7 +34,7 @@ class Solver(ABC):
 class VRPSolver(Solver):
 
     def solve(self) -> VRPSolution:
-        currState: VRPSolution = VRPSolver.pickInitSolution()
+        currState: VRPSolution = self.pickInitSolution()
 
         done: bool = False
         while not done:
@@ -56,14 +56,14 @@ class VRPSolver(Solver):
     def pickInitSolution(self) -> VRPSolution:
         problem = cast(VRPProblem, self.problem)
 
-        nodes = copy(problem.nodes)
+        nodes = problem.nodes[:]
         random.shuffle(nodes)
 
         routes = []
         startIdx = 0
         for _ in range(problem.numCustomers):
             endIdx = random.randint(0, problem.numCustomers - startIdx)
-            routes.append(nodes[startIdx:endIdx])
+            routes.append(Route(nodes[startIdx:endIdx]))
             startIdx = endIdx
 
         return VRPSolution(problem, routes)
