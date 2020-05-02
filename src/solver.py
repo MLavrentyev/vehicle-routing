@@ -13,14 +13,13 @@ from problem import Problem, VRPProblem, Solution, VRPSolution
 class Solver(ABC):
 
     @classmethod
-    @abstractmethod
-    def factory(cls, problem: Problem, startTime: float):
+    def factory(cls, problem: Problem):
         solver = cls()
-        solver.setStartTime(startTime)
+        solver.setProblem(problem)
         return solver
 
-    def setStartTime(self, startTime: float) -> None:
-        self.startTime = startTime
+    def setProblem(self, problem: Problem) -> None:
+        self.problem: Problem = problem
 
     @abstractmethod
     def solve(self) -> Solution:
@@ -36,10 +35,18 @@ class Solver(ABC):
 
 
 class VRPSolver(Solver):
-    ...
+
+    def solve(self) -> VRPSolution:
+        pass
+
+    def neighborhood(self, solution: Solution) -> Generator[VRPSolution, None, None]:
+        pass
+
+    def done(self) -> bool:
+        pass
 
 
-def initSolverProcs(solverFactory: Callable[[Problem, float], Solver], numSolvers: int, factoryArgs: Tuple = ()) -> Tuple[List[Solver], List[Process]]:
+def initSolverProcs(solverFactory: Callable[[Problem], Solver], numSolvers: int, factoryArgs: Tuple = ()) -> Tuple[List[Solver], List[Process]]:
     solvers: List[Solver] = []
     solverProcs: List[Process] = []
     for _ in range(numSolvers):
@@ -50,13 +57,13 @@ def initSolverProcs(solverFactory: Callable[[Problem, float], Solver], numSolver
     return solvers, solverProcs
 
 
-def runMultiProcSolver(solverFactory: Callable[[Problem, float], Solver], problem: Problem, numProcs: int = cpu_count()) -> Solution:
+def runMultiProcSolver(solverFactory: Callable[[Problem], Solver], problem: Problem, numProcs: int = cpu_count()) -> Tuple[Solution, float]:
     queueConn: Queue = Queue()
     startTime: float = time.time()
 
     solvers: List[Solver]
     solverProcs: List[Process]
-    solvers, solverProcs = initSolverProcs(solverFactory, numProcs, factoryArgs=(problem, startTime))
+    solvers, solverProcs = initSolverProcs(solverFactory, numProcs, factoryArgs=(problem,))
 
     # do a restart, with growing time increments
     timeout: int = 30
@@ -74,7 +81,7 @@ def runMultiProcSolver(solverFactory: Callable[[Problem, float], Solver], proble
 
             for solverProc in solverProcs:
                 solverProc.terminate()
-            solvers, solverProcs = initSolverProcs(solverFactory, numProcs, factoryArgs=(problem, startTime))
+            solvers, solverProcs = initSolverProcs(solverFactory, numProcs, factoryArgs=(problem,))
             for solverProc in solverProcs:
                 solverProc.start()
 
@@ -82,18 +89,21 @@ def runMultiProcSolver(solverFactory: Callable[[Problem, float], Solver], proble
     for solverProc in solverProcs:
         solverProc.terminate()
 
-    return solution
+    return solution, (time.time() - startTime)
 
 
 
 if __name__ == "__main__":
     problem: VRPProblem = vrpIo.readInput(sys.argv[1])
-    solution: VRPSolution = cast(VRPSolution, runMultiProcSolver(VRPSolver.factory, problem))
+
+    solution: VRPSolution
+    solveTime: float
+    solution, solveTime = cast(Tuple[VRPSolution, float], runMultiProcSolver(VRPSolver.factory, problem))
 
     if len(sys.argv) == 4 and sys.argv[2] == "-f":
         vrpIo.writeSolutionToFile(solution, sys.argv[3])
     elif len(sys.argv) == 2:
-        vrpIo.printSolution(solution)
+        vrpIo.printSolution(solution, solveTime)
     else:
         raise IOError("Incorrect arguments passed.")
 

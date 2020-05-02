@@ -42,10 +42,10 @@ def writeSolutionToFile(solution: VRPSolution, file: str) -> None:
         solFile.writelines(text)
 
 
-def printSolution(solution: VRPSolution) -> None:
+def printSolution(solution: VRPSolution, solveTime: float) -> None:
     lines: List[str] = formatSolution(solution)
 
     print(f"Instance: {solution.problem.file}"
-          f" Time: {solution.solveTime():.2f}"
+          f" Time: {solveTime:.2f}"
           f" Result: {solution.objectiveValue():.2f}"
           f" Solution {int(solution.isOptimal())} {' '.join(lines[1:])}")

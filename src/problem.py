@@ -80,11 +80,9 @@ class VRPProblem(Problem):
 
 
 class VRPSolution(Solution):
-    def __init__(self, problem: VRPProblem, routes: List[Route], solveTimeSec: float):
-        assert solveTimeSec >= 0
+    def __init__(self, problem: VRPProblem, routes: List[Route]):
         assert len(routes) == problem.numTrucks  # every truck has a route
 
-        self.solveTimeSec: float = solveTimeSec
         self.problem: VRPProblem = problem
         self.routes: List[Route] = routes
 
@@ -98,6 +96,3 @@ class VRPSolution(Solution):
     def isOptimal(self) -> bool:
         # TODO: fill in
         return False
-
-    def solveTime(self) -> float:
-        return self.solveTimeSec
