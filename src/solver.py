@@ -29,10 +29,6 @@ class Solver(ABC):
     def neighborhood(self, solution: Solution) -> Generator[Solution, None, None]:
         pass
 
-    @abstractmethod
-    def done(self) -> bool:
-        pass
-
 
 class VRPSolver(Solver):
 
@@ -45,7 +41,7 @@ class VRPSolver(Solver):
             # II - look for better neighbor (if none, we are done)
             neighbSolution: VRPSolution
             for neighbSolution in self.neighborhood(currState):
-                if neighbSolution.objectiveValue <= currState.objectiveValue:
+                if neighbSolution.objectiveValue >= currState.objectiveValue:
                     currState = neighbSolution
                     done = False
                     break
@@ -55,9 +51,6 @@ class VRPSolver(Solver):
     def neighborhood(self, solution: Solution) -> Generator[VRPSolution, None, None]:
         solution = cast(VRPSolution, solution)
         yield solution # TODO: fill in
-
-    def done(self) -> bool:
-        pass
 
     @staticmethod
     def pickInitSolution() -> VRPSolution:

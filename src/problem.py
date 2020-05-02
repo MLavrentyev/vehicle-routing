@@ -1,8 +1,8 @@
 from typing import List
 from abc import ABC
-from cached_property import cached_property
 import math
 import itertools
+import functools
 
 
 class Problem(ABC):
@@ -87,14 +87,14 @@ class VRPSolution(Solution):
         self.problem: VRPProblem = problem
         self.routes: List[Route] = routes
 
-    @cached_property
+    @property
     def objectiveValue(self) -> float:
         totalDist: float = sum([route.distance(self.problem.depotNode) for route in self.routes])
         infeasiblePenalty: float = 0 # TODO: fill this in
 
         return totalDist - infeasiblePenalty
 
-    @cached_property
+    @property
     def isOptimal(self) -> bool:
         # TODO: fill in
         return False
