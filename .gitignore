@@ -10,5 +10,6 @@ venv/
 # Compiled files
 *.class
 */__pycache__/
+.mypy_cache/
 
 local/

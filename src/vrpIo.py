@@ -1,15 +1,15 @@
 from typing import List
 import math
-from problem import Problem, Node, Route, Solution
+from problem import VRPProblem, Node, Route, VRPSolution
 
 
-def readInput(file: str) -> Problem:
+def readInput(file: str) -> VRPProblem:
     with open(file, mode="r") as vrpFile:
         # read header in
         header: List[int] = [int(arg) for arg in vrpFile.readline().strip().split()]
         depotLine: List[str] = vrpFile.readline().strip().split()
         depotNode: Node = Node(0, int(depotLine[0]), float(depotLine[1]), float(depotLine[2]))
-        problem: Problem = Problem(header[0], header[1], header[2], depotNode, file)
+        problem: VRPProblem = VRPProblem(header[0], header[1], header[2], depotNode, file)
 
         # read node locations in
         nextId: int = 1
@@ -23,10 +23,10 @@ def readInput(file: str) -> Problem:
     return problem
 
 
-def formatSolution(solution: Solution) -> List[str]:
+def formatSolution(solution: VRPSolution) -> List[str]:
     lines = []
     # add solution header (objective value, is optimal?)
-    lines.append(f"{solution.objectiveValue()} {int(solution.isOptimal())}")
+    lines.append(f"{solution.objectiveValue} {int(solution.isOptimal)}")
     # add route solutions
     for route in solution.routes:
         lines.append(str(route))
@@ -34,7 +34,7 @@ def formatSolution(solution: Solution) -> List[str]:
     return lines
 
 
-def writeSolutionToFile(solution: Solution, file: str) -> None:
+def writeSolutionToFile(solution: VRPSolution, file: str) -> None:
     lines: List[str] = formatSolution(solution)
     text: str = "\n".join(lines)
 
@@ -42,10 +42,10 @@ def writeSolutionToFile(solution: Solution, file: str) -> None:
         solFile.writelines(text)
 
 
-def printSolution(solution: Solution) -> None:
+def printSolution(solution: VRPSolution, solveTime: float) -> None:
     lines: List[str] = formatSolution(solution)
 
     print(f"Instance: {solution.problem.file}"
-          f" Time: {solution.solveTimeSec:.2f}"
-          f" Result: {solution.objectiveValue():.2f}"
-          f" Solution {int(solution.isOptimal())} {' '.join(lines[1:])}")
+          f" Time: {solveTime:.2f}"
+          f" Result: {solution.objectiveValue:.2f}"
+          f" Solution {int(solution.isOptimal)} {' '.join(lines[1:])}")

@@ -1,6 +1,16 @@
 from typing import List
+from abc import ABC
 import math
 import itertools
+import functools
+
+
+class Problem(ABC):
+    pass
+
+
+class Solution(ABC):
+    pass
 
 
 class Node:
@@ -11,7 +21,7 @@ class Node:
         self.y: float = yPos
 
     def __eq__(self, otherNode) -> bool:
-        return self.demand == other.demand and self.x == other.x and self.y == other.y
+        return self.demand == otherNode.demand and self.x == otherNode.x and self.y == otherNode.y
 
     def __str__(self):
         return str(self.id)
@@ -49,8 +59,12 @@ class Route:
 
         return dist
 
+    @property
+    def demand(self):
+        return sum([stop.demand for stop in self.stops])
 
-class Problem:
+
+class VRPProblem(Problem):
     def __init__(self, numCustomers: int, numTrucks: int, truckCapacity: int, depotNode: Node, file: str = None):
         assert depotNode.demand == 0
 
@@ -70,22 +84,34 @@ class Problem:
         self.nodes.append(node)
 
 
-class Solution:
-    def __init__(self, problem: Problem, routes: List[Route], solveTimeSec: float):
-        assert solveTimeSec >= 0
+class VRPSolution(Solution):
+    def __init__(self, problem: VRPProblem, routes: List[Route]):
         assert len(routes) == problem.numTrucks  # every truck has a route
 
-        self.solveTimeSec: float = solveTimeSec
-        self.problem: Problem = problem
+        self.problem: VRPProblem = problem
         self.routes: List[Route] = routes
 
+    @property
     def objectiveValue(self) -> float:
-        totalDist: float = 0
-        for route in self.routes:
-            totalDist += route.distance(self.problem.depotNode)
+        #TODO: may need different multiplier for capOverflow infeasibility penalty
+        infeasiblePenalty: float =  self.capacityOverflow
 
-        return totalDist
+        return -(self.distance + infeasiblePenalty)
 
+    @property
+    def distance(self) -> float:
+        return sum([route.distance(self.problem.depotNode) for route in self.routes])
+
+    @property
+    def capacityOverflow(self) -> float:
+        capOverflow: float = 0
+        for rte in self.routes:
+            demandSupplyDiff = rte.demand - self.problem.truckCapacity
+            capOverflow += demandSupplyDiff if demandSupplyDiff > 0 else 0
+
+        return capOverflow
+
+    @property
     def isOptimal(self) -> bool:
         # TODO: fill in
         return False
