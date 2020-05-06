@@ -1,17 +1,17 @@
-from typing import List
+from typing import List, Tuple, TypeVar
 from abc import ABC
 import math
 import itertools
 import functools
 
-
-class Problem(ABC):
-    pass
-
+T = TypeVar('T')
 
 class Solution(ABC):
-    pass
+    def dist(self, other) -> float: pass
 
+class Problem(ABC):
+    def check(self, sol: Solution) -> bool: pass
+    def objectiveValue(self, sol: Solution) -> float: pass
 
 class Node:
     def __init__(self, nodeId: int, demand: int, xPos: float, yPos: float):
@@ -31,6 +31,9 @@ class Node:
 
     def distance(self, otherNode) -> float:
         return math.sqrt((self.x - otherNode.x) ** 2 + (self.y - otherNode.y) ** 2)
+
+
+DEPOT = Node(-1, 0, 0, 0)
 
 
 class Route:
@@ -59,6 +62,12 @@ class Route:
 
         return dist
 
+    def adjacents(self, i: int) -> Tuple[Node, Node]:
+        stops = self.stops
+        if i == 0: return (stops[1], DEPOT)
+        elif i == len(stops)-1: return (stops[len(stops)-1], DEPOT)
+        return (stops[i-1], stops[i+1])
+
     @property
     def demand(self):
         return sum([stop.demand for stop in self.stops])
@@ -77,12 +86,15 @@ class VRPProblem(Problem):
         self.depotNode: Node = depotNode
         self.nodes: List[Node] = []
 
+    def check(self, sol: Solution) -> bool: pass
+
+    def objectiveValue(self, sol: Solution) -> float: pass
+
     def __repr__(self) -> str:
         return f"(Problem <#custs {self.numCustomers}>, <#trucks {self.numTrucks}>, <truckCap {self.truckCapacity}>)"
 
     def addNode(self, node: Node) -> None:
         self.nodes.append(node)
-
 
 class VRPSolution(Solution):
     def __init__(self, problem: VRPProblem, routes: List[Route]):
@@ -93,14 +105,34 @@ class VRPSolution(Solution):
 
     @property
     def objectiveValue(self) -> float:
-        #TODO: may need different multiplier for capOverflow infeasibility penalty
-        infeasiblePenalty: float =  self.capacityOverflow
+        # TODO: may need different multiplier for capOverflow infeasibility penalty
+        infeasiblePenalty: float = self.capacityOverflow
 
         return -(self.distance + infeasiblePenalty)
 
     @property
     def distance(self) -> float:
         return sum([route.distance(self.problem.depotNode) for route in self.routes])
+
+    def adjacents(self, node: Node) -> Tuple[Node, Node]:
+        """Get pair of nodes before/after a node"""
+        for route in self.routes:
+            stops: List[Node] = route.stops
+            i: int = stops.index(node)
+            if i >= 0: return route.adjacents(i)
+        raise Exception(f"Node not found: {node}")
+
+    def dist(self, other) -> float:
+        """Get dist between 2 solutions"""
+        total: float = 0
+        for (i, route) in enumerate(self.routes):
+            for stop in route.stops:
+                (pre1, suc1) = route.adjacents(i)
+                (pre2, suc2) = other.adjacents(stop)
+                # choose the min of both orders to maintain invariance under route reversal:
+                total += min(pre1.distance(pre2)+suc1.distance(suc2), # same order
+                             pre1.distance(suc2)+suc1.distance(pre2)) # swapped
+        return total
 
     @property
     def capacityOverflow(self) -> float:

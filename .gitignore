@@ -13,3 +13,5 @@ venv/
 .mypy_cache/
 
 local/
+/venv-pypy/
+*.mypy_cache
