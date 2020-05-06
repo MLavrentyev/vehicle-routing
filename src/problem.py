@@ -9,14 +9,16 @@ T = TypeVar('T')
 
 class Solution(ABC):
     def dist(self, other) -> float: pass
+    def check(self) -> bool: pass
+    def objectiveValue(self) -> float: pass
+    def neighbors(self): pass   # -> List[Solution]
     @classmethod
-    def any(cls, prob): pass
+    def any(cls, prob): pass    # -> Solution
     @classmethod
-    def rand(cls, prob): pass
+    def rand(cls, prob): pass   # -> Solution
+    def __eq__(self, other): return self.dist(other) == 0
 
-class Problem(ABC):
-    def check(self, sol: Solution) -> bool: pass
-    def objectiveValue(self, sol: Solution) -> float: pass
+class Problem(ABC): pass
 
 class Node:
     def __init__(self, nodeId: int, demand: int, xPos: float, yPos: float):
@@ -87,10 +89,6 @@ class VRPProblem(Problem):
         self.depotNode: Node = depotNode
         self.nodes: List[Node] = []
 
-    def check(self, sol: Solution) -> bool: pass
-
-    def objectiveValue(self, sol: Solution) -> float: pass
-
     def __repr__(self) -> str:
         return f"(Problem <#custs {self.numCustomers}>, <#trucks {self.numTrucks}>, <truckCap {self.truckCapacity}>)"
 
@@ -107,6 +105,12 @@ class VRPSolution(Solution):
 
     def __str__(self) -> str:
         return str([route.stops for route in self.routes])
+
+    def check(self, sol: Solution) -> bool: pass
+
+    def objectiveValue(self, sol: Solution) -> float: pass
+
+    def neighbors(self): pass
 
     @classmethod
     def any(cls, prob: VRPProblem):
