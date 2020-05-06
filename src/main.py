@@ -23,6 +23,7 @@ if __name__ == '__main__':
     sol: VRPSolution = VRPSolution.rand(prob)
     print(f"sol\t\t: {sol}")
     for neigh in sol.neighbors():
+        neigh.normalize()
         print(f"neigh\t: {neigh}")
 
 

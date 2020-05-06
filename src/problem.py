@@ -17,6 +17,7 @@ class Solution(ABC):
     @classmethod
     def rand(cls, prob): pass   # -> Solution
     def __eq__(self, other): return self.dist(other) == 0
+    def normalize(self) -> None: return
 
 class Problem(ABC): pass
 
@@ -77,6 +78,9 @@ class Route:
     def demand(self):
         return sum([stop.demand for stop in self.stops])
 
+    def normalize(self) -> None:
+        """Mutate to be equivalent canonicle representation"""
+        if self.stops[0].id > self.stops[-1].id: self.stops.reverse()
 
 class VRPProblem(Problem):
     def __init__(self, numCustomers: int, numTrucks: int, truckCapacity: int, depotNode: Node, file: str = None):
@@ -187,3 +191,8 @@ class VRPSolution(Solution):
 
     def fullRoute(self) -> List[Node]:
         return [stop for route in self.routes for stop in [self.depot]+route.stops]+[self.depot]
+
+    def normalize(self) -> None:
+        """Mutate to be equivalent canonicle representation"""
+        for route in self.routes: route.normalize()
+        self.routes.sort(key = lambda r: (len(r.stops), r.stops[0].id if r.stops else -1))
