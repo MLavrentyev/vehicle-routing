@@ -4,6 +4,8 @@ import vrpIo
 from problem import VRPProblem, VRPSolution
 from solver import VRPSolver
 
+from vis import plot
+
 ### Run: python src/main.py simpleInput/5_4_10.vrp
 
 if __name__ == '__main__':
@@ -12,7 +14,4 @@ if __name__ == '__main__':
     print(f"problem: {prob}")
     sol: VRPSolution = VRPSolution.any(prob)
     print(f"sol: {sol}")
-
-
-    # solver = VRPSolver.factory(prob)
-    # sol = solver.pickInitSolution()
+    plot(sol)

@@ -9,9 +9,9 @@ T = TypeVar('T')
 class Solution(ABC):
     def dist(self, other) -> float: pass
     @classmethod
-    def any(cls, prob: "Problem"): pass
+    def any(cls, prob): pass
     @classmethod
-    def rand(cls, prob: "Problem"): pass
+    def rand(cls, prob): pass
 
 class Problem(ABC):
     def check(self, sol: Solution) -> bool: pass
@@ -35,10 +35,6 @@ class Node:
 
     def distance(self, otherNode) -> float:
         return math.sqrt((self.x - otherNode.x) ** 2 + (self.y - otherNode.y) ** 2)
-
-
-DEPOT = Node(-1, 0, 0, 0)
-
 
 class Route:
     def __init__(self, stops: List[Node] = None):
@@ -66,10 +62,10 @@ class Route:
 
         return dist
 
-    def adjacents(self, i: int) -> Tuple[Node, Node]:
+    def adjacents(self, i: int, depot: Node) -> Tuple[Node, Node]:
         stops = self.stops
-        if i == 0: return (stops[1], DEPOT)
-        elif i == len(stops)-1: return (stops[len(stops)-1], DEPOT)
+        if i == 0: return (stops[1], depot)
+        elif i == len(stops)-1: return (stops[len(stops)-1], depot)
         return (stops[i-1], stops[i+1])
 
     @property
@@ -106,10 +102,15 @@ class VRPSolution(Solution):
 
         self.problem: VRPProblem = problem
         self.routes: List[Route] = routes
+        self.depot = problem.depotNode
+
+    def __str__(self) -> str:
+        return str([route.stops for route in self.routes])
 
     @classmethod
     def any(cls, prob: VRPProblem):
-        return cls(prob, [Route(prob.nodes)]+[Route([])]*(prob.numTrucks-1))
+        indss = [range(i, len(prob.nodes), prob.numTrucks) for i in range(prob.numTrucks)]
+        return cls(prob, [Route([prob.nodes[i] for i in inds]) for inds in indss])
 
     @property
     def objectiveValue(self) -> float:
@@ -120,14 +121,14 @@ class VRPSolution(Solution):
 
     @property
     def distance(self) -> float:
-        return sum([route.distance(self.problem.depotNode) for route in self.routes])
+        return sum([route.distance(self.depot) for route in self.routes])
 
     def adjacents(self, node: Node) -> Tuple[Node, Node]:
         """Get pair of nodes before+after a node"""
         for route in self.routes:
             stops: List[Node] = route.stops
             i: int = stops.index(node)
-            if i >= 0: return route.adjacents(i)
+            if i >= 0: return route.adjacents(i, self.depot)
         raise Exception(f"Node not found: {node}")
 
     def dist(self, other) -> float:
@@ -135,7 +136,7 @@ class VRPSolution(Solution):
         total: float = 0
         for (i, route) in enumerate(self.routes):
             for stop in route.stops:
-                (pre1, suc1) = route.adjacents(i)
+                (pre1, suc1) = route.adjacents(i, self.depot)
                 (pre2, suc2) = other.adjacents(stop)
                 # choose the min of both orders to maintain invariance under route reversal:
                 total += min(pre1.distance(pre2)+suc1.distance(suc2), # same order
@@ -155,3 +156,6 @@ class VRPSolution(Solution):
     def isOptimal(self) -> bool:
         # TODO: fill in
         return False
+
+    def fullRoute(self) -> List[Node]:
+        return [stop for route in self.routes for stop in [self.depot]+route.stops]+[self.depot]
