@@ -5,10 +5,18 @@ from problem import VRPSolution
 
 ####
 
+def init():
+    # plt.style.use('fivethirtyeight')
+    plt.ion()
+
 def plot(sol: VRPSolution):
     for route in sol.routes:
         stops = [sol.depot]+route.stops+[sol.depot]
         xs = [stop.x for stop in stops]
         ys = [stop.y for stop in stops]
         plt.plot(xs, ys)
-    plt.show()
+        plt.title(f"Feasible: {'??'} | Score: {'??'}")
+    plt.draw()
+    plt.pause(0.0001)   # whytf is this necessary?
+    plt.clf()
+

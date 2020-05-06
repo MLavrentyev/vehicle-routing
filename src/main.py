@@ -1,17 +1,24 @@
 import sys
+import time
 
 import vrpIo
 from problem import VRPProblem, VRPSolution
 from solver import VRPSolver
 
-from vis import plot
+from vis import plot, init
 
-### Run: python src/main.py simpleInput/5_4_10.vrp
+### Run: python3 src/main.py simpleInput/16_5_1.vrp
 
 if __name__ == '__main__':
     # print(f"sys.argv[1]: {sys.argv[1]}")
     prob: VRPProblem = vrpIo.readInput(sys.argv[1])
     print(f"problem: {prob}")
-    sol: VRPSolution = VRPSolution.any(prob)
-    print(f"sol: {sol}")
-    plot(sol)
+
+    init()
+    plot(VRPSolution.rand(prob))
+    for _ in range(4):
+        time.sleep(0.5)
+        plot(VRPSolution.rand(prob))
+
+
+

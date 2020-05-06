@@ -1,3 +1,4 @@
+import random
 from typing import List, Tuple, TypeVar
 from abc import ABC
 import math
@@ -111,6 +112,15 @@ class VRPSolution(Solution):
     def any(cls, prob: VRPProblem):
         indss = [range(i, len(prob.nodes), prob.numTrucks) for i in range(prob.numTrucks)]
         return cls(prob, [Route([prob.nodes[i] for i in inds]) for inds in indss])
+
+    @classmethod
+    def rand(cls, prob: VRPProblem):
+        sol: VRPSolution = cls(prob, [Route([]) for _ in range(prob.numTrucks)])
+        for node in prob.nodes:
+            random.choice(sol.routes).stops.append(node)
+        for route in sol.routes:
+            random.shuffle(route.stops)
+        return sol
 
     @property
     def objectiveValue(self) -> float:
