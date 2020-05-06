@@ -1,5 +1,5 @@
 import random
-from typing import List, Tuple, TypeVar
+from typing import List, Tuple, TypeVar, Optional
 from abc import ABC
 import math
 import itertools
@@ -9,15 +9,17 @@ T = TypeVar('T')
 
 class Solution(ABC):
     def dist(self, other) -> float: pass
+    @property
     def check(self) -> bool: pass
+    @property
     def objectiveValue(self) -> float: pass
-    def neighbors(self): pass   # -> List[Solution]
+    def neighbors(self): pass           # -> List[Solution]
     @classmethod
-    def any(cls, prob): pass    # -> Solution
+    def any(cls, prob): pass            # -> Solution
     @classmethod
-    def rand(cls, prob): pass   # -> Solution
-    def __eq__(self, other): return self.dist(other) == 0
-    def normalize(self) -> None: return
+    def rand(cls, prob): pass           # -> Solution
+    def equiv(self, other): return self.dist(other) == 0
+    def normalize(self): return self    # -> Solution
 
 class Problem(ABC): pass
 
@@ -42,9 +44,14 @@ class Node:
 
     def name(self): return f'{self.id:03}'
 
+ORIGIN: Node = Node(-1, 0 , 0, 0)
+
 class Route:
-    def __init__(self, stops: List[Node] = None):
+    def __init__(self, stops: List[Node] = None, depot: Node = None):
         self.stops: List[Node] = stops if stops else []
+        assert Node is not None
+        self.depot = depot or ORIGIN
+        self._objVal: Optional[float] = None
 
     def __str__(self) -> str:
         nodeIds: List[str] = [str(n) for n in self.stops]
@@ -70,7 +77,7 @@ class Route:
 
     def adjacents(self, i: int, depot: Node) -> Tuple[Node, Node]:
         stops = self.stops
-        if i == 0: return (stops[1], depot)
+        if i == 0: return (stops[1] if stops else depot, depot)
         elif i == len(stops)-1: return (stops[len(stops)-1], depot)
         return (stops[i-1], stops[i+1])
 
@@ -78,13 +85,23 @@ class Route:
     def demand(self):
         return sum([stop.demand for stop in self.stops])
 
-    def normalize(self) -> None:
+    def normalize(self):
         """Mutate to be equivalent canonicle representation"""
-        if self.stops[0].id > self.stops[-1].id: self.stops.reverse()
+        if self.stops and self.stops[0].id > self.stops[-1].id: self.stops.reverse()
+        return self
+
+    @property
+    def objectiveValue(self) -> float:
+        if self._objVal is not None: return self._objVal    # memoize
+        if not self.stops: return 0
+        obj: float = self.depot.distance(self.stops[0]) + self.depot.distance(self.stops[-1])
+        for i in range(len(self.stops)-1):
+            obj += self.stops[i].distance(self.stops[i+1])
+        return obj
 
 class VRPProblem(Problem):
-    def __init__(self, numCustomers: int, numTrucks: int, truckCapacity: int, depotNode: Node, file: str = None):
-        assert depotNode.demand == 0
+    def __init__(self, numCustomers: int, numTrucks: int, truckCapacity: int, depot: Node, file: str = None):
+        assert depot.demand == 0
 
         self.file = file
 
@@ -92,7 +109,7 @@ class VRPProblem(Problem):
         self.numTrucks: int = numTrucks
         self.truckCapacity: int = truckCapacity
 
-        self.depotNode: Node = depotNode
+        self.depot: Node = depot
         self.nodes: List[Node] = []
 
     def __repr__(self) -> str:
@@ -107,7 +124,8 @@ class VRPSolution(Solution):
 
         self.problem: VRPProblem = problem
         self.routes: List[Route] = routes
-        self.depot = problem.depotNode
+        self.depot = problem.depot
+        self._objVal: Optional[float] = None
 
     def __str__(self) -> str:
         # return str([route.stops for route in self.routes])
@@ -115,16 +133,19 @@ class VRPSolution(Solution):
 
     def check(self) -> bool: pass
 
-    def objectiveValue(self) -> float: pass
+    @property
+    def objectiveValue(self) -> float:
+        if self._objVal is not None: return self._objVal    # memoize
+        return sum(r.objectiveValue for r in self.routes)
 
     def neighbors(self):
         neighs = []
         # swap a random pair from each route (just an example)
         for route in self.routes:
-            if len(route.stops) >= 2:
+            if len(route.stops) >= 3:
                 stops: List[Node] = route.stops
                 i: int = random.randrange(len(stops)-1)
-                newRoute: Route = Route(stops[:i]+[stops[i+1], stops[i]]+stops[i+2:])
+                newRoute = Route(stops[:i]+[stops[i+1], stops[i]]+stops[i+2:], self.depot)
                 j: int = self.routes.index(route)
                 newRoutes: List[Route] = self.routes[:j]+[newRoute]+self.routes[j+1:]
                 neighs.append(VRPSolution(self.problem, newRoutes))
@@ -133,23 +154,23 @@ class VRPSolution(Solution):
     @classmethod
     def any(cls, prob: VRPProblem):
         indss = [range(i, len(prob.nodes), prob.numTrucks) for i in range(prob.numTrucks)]
-        return cls(prob, [Route([prob.nodes[i] for i in inds]) for inds in indss])
+        return cls(prob, [Route([prob.nodes[i] for i in inds]) for inds in indss], prob.depot)
 
     @classmethod
     def rand(cls, prob: VRPProblem):
-        sol: VRPSolution = cls(prob, [Route([]) for _ in range(prob.numTrucks)])
+        sol: VRPSolution = cls(prob, [Route([], prob.depot) for _ in range(prob.numTrucks)])
         for node in prob.nodes:
             random.choice(sol.routes).stops.append(node)
         for route in sol.routes:
             random.shuffle(route.stops)
         return sol
 
-    @property
-    def objectiveValue(self) -> float:
-        # TODO: may need different multiplier for capOverflow infeasibility penalty
-        infeasiblePenalty: float = self.capacityOverflow
-
-        return -(self.distance + infeasiblePenalty)
+    # @property
+    # def objectiveValue(self) -> float:
+    #     # TODO: may need different multiplier for capOverflow infeasibility penalty
+    #     infeasiblePenalty: float = self.capacityOverflow
+    #
+    #     return -(self.distance + infeasiblePenalty)
 
     @property
     def distance(self) -> float:
@@ -165,6 +186,7 @@ class VRPSolution(Solution):
 
     def dist(self, other) -> float:
         """Get dist between 2 solutions"""
+        # FIXME: buggy
         total: float = 0
         for (i, route) in enumerate(self.routes):
             for stop in route.stops:
@@ -192,7 +214,9 @@ class VRPSolution(Solution):
     def fullRoute(self) -> List[Node]:
         return [stop for route in self.routes for stop in [self.depot]+route.stops]+[self.depot]
 
-    def normalize(self) -> None:
+    def normalize(self):
         """Mutate to be equivalent canonicle representation"""
+        # use for debugging, not solving
         for route in self.routes: route.normalize()
         self.routes.sort(key = lambda r: (len(r.stops), r.stops[0].id if r.stops else -1))
+        return self
