@@ -39,6 +39,8 @@ class Node:
     def distance(self, otherNode) -> float:
         return math.sqrt((self.x - otherNode.x) ** 2 + (self.y - otherNode.y) ** 2)
 
+    def name(self): return f'{self.id:03}'
+
 class Route:
     def __init__(self, stops: List[Node] = None):
         self.stops: List[Node] = stops if stops else []
@@ -104,13 +106,25 @@ class VRPSolution(Solution):
         self.depot = problem.depotNode
 
     def __str__(self) -> str:
-        return str([route.stops for route in self.routes])
+        # return str([route.stops for route in self.routes])
+        return '|'.join('-'.join(stop.name() for stop in route.stops) for route in self.routes)
 
-    def check(self, sol: Solution) -> bool: pass
+    def check(self) -> bool: pass
 
-    def objectiveValue(self, sol: Solution) -> float: pass
+    def objectiveValue(self) -> float: pass
 
-    def neighbors(self): pass
+    def neighbors(self):
+        neighs = []
+        # swap a random pair from each route (just an example)
+        for route in self.routes:
+            if len(route.stops) >= 2:
+                stops: List[Node] = route.stops
+                i: int = random.randrange(len(stops)-1)
+                newRoute: Route = Route(stops[:i]+[stops[i+1], stops[i]]+stops[i+2:])
+                j: int = self.routes.index(route)
+                newRoutes: List[Route] = self.routes[:j]+[newRoute]+self.routes[j+1:]
+                neighs.append(VRPSolution(self.problem, newRoutes))
+        return neighs
 
     @classmethod
     def any(cls, prob: VRPProblem):

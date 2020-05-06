@@ -14,11 +14,16 @@ if __name__ == '__main__':
     prob: VRPProblem = vrpIo.readInput(sys.argv[1])
     print(f"problem: {prob}")
 
-    init()
-    plot(VRPSolution.rand(prob))
-    for _ in range(4):
-        time.sleep(0.5)
-        plot(VRPSolution.rand(prob))
+    # init()
+    # plot(VRPSolution.rand(prob))
+    # for _ in range(4):
+    #     time.sleep(0.5)
+    #     plot(VRPSolution.rand(prob))
+    
+    sol: VRPSolution = VRPSolution.rand(prob)
+    print(f"sol\t\t: {sol}")
+    for neigh in sol.neighbors():
+        print(f"neigh\t: {neigh}")
 
 
 
