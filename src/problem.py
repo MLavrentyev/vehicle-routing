@@ -8,6 +8,10 @@ T = TypeVar('T')
 
 class Solution(ABC):
     def dist(self, other) -> float: pass
+    @classmethod
+    def any(cls, prob: "Problem"): pass
+    @classmethod
+    def rand(cls, prob: "Problem"): pass
 
 class Problem(ABC):
     def check(self, sol: Solution) -> bool: pass
@@ -103,6 +107,10 @@ class VRPSolution(Solution):
         self.problem: VRPProblem = problem
         self.routes: List[Route] = routes
 
+    @classmethod
+    def any(cls, prob: VRPProblem):
+        return cls(prob, [Route(prob.nodes)]+[Route([])]*(prob.numTrucks-1))
+
     @property
     def objectiveValue(self) -> float:
         # TODO: may need different multiplier for capOverflow infeasibility penalty
@@ -115,7 +123,7 @@ class VRPSolution(Solution):
         return sum([route.distance(self.problem.depotNode) for route in self.routes])
 
     def adjacents(self, node: Node) -> Tuple[Node, Node]:
-        """Get pair of nodes before/after a node"""
+        """Get pair of nodes before+after a node"""
         for route in self.routes:
             stops: List[Node] = route.stops
             i: int = stops.index(node)
