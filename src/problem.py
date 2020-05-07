@@ -153,9 +153,9 @@ class VRPSolution(Solution):
     def objectiveValue(self) -> float:
         if self._objVal is not None: # memoize
             return self._objVal
-
-        #TODO: infeasibility penalty (self.capacityOverflow)
-        return sum(r.distance for r in self.routes)
+        else:
+            # distance minus infeasibility penalty
+            return sum(r.distance for r in self.routes) - self.capacityOverflow
 
     def neighbors(self):
         neighs = []
@@ -193,7 +193,7 @@ class VRPSolution(Solution):
     def distance(self) -> float:
         return sum([route.distance for route in self.routes])
 
-    def adjacents(self, node: Node) -> Tuple[Node, Node]:
+    def getAdjacentNodes(self, node: Node) -> Tuple[Node, Node]:
         """Get pair of nodes before + after a node"""
         for route in self.routes:
             i: int = route.stops.index(node)
@@ -230,7 +230,7 @@ class VRPSolution(Solution):
         # TODO: fill in
         return False
 
-    def fullRoute(self) -> List[Node]:
+    def getFullRoute(self) -> List[Node]:
         #TODO: what is this doing?
         return [stop for route in self.routes for stop in [self.depot] + route.stops] + [self.depot]
 
