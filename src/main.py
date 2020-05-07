@@ -18,7 +18,7 @@ if __name__ == '__main__':
     print(f"problem: {problem}")
 
     init()
-    sol: VRPSolution = VRPSolution.rand(problem).normalize()
+    sol: VRPSolution = VRPSolution.randomSolution(problem).normalize()
     display(sol)
 
     for _ in range(20):

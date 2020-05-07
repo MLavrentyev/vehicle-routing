@@ -31,7 +31,7 @@ class Solver(ABC):
         pass
 
 
-class VRPSolver(Solver):
+class VRPSolver(Solver): #TODO: abstract out to Solver clas
 
     def solve(self) -> VRPSolution:
         currState: VRPSolution = self.pickInitSolution()
@@ -51,7 +51,9 @@ class VRPSolver(Solver):
 
     def neighborhood(self, solution: Solution) -> Generator[VRPSolution, None, None]:
         solution = cast(VRPSolution, solution)
-        yield solution # TODO: fill in
+
+        for neighb in solution.neighbors():
+            yield neighb
 
     def pickInitSolution(self) -> VRPSolution:
         problem = cast(VRPProblem, self.problem)
