@@ -21,12 +21,13 @@ class Solution(ABC):
 
     def neighbors(self): # -> List[Solution]
         pass
+
     @classmethod
-    def any(cls, prob): # -> Solution
+    def anySolution(cls, prob): # -> Solution
         pass
 
     @classmethod
-    def rand(cls, prob): # -> Solution
+    def randomSolution(cls, prob): # -> Solution
         pass
 
     def equiv(self, other):
@@ -69,7 +70,7 @@ class Route:
         self.stops: List[Node] = stops
         self.depot: Node = depot
 
-        self.dist: Optional[float] = None
+        self._dist: Optional[float] = None
 
     def __str__(self) -> str:
         nodeIds: List[str] = [str(n) for n in self.stops]
@@ -86,8 +87,8 @@ class Route:
 
     @property
     def distance(self) -> float:
-        if self.dist is not None: # memoize
-            return self.dist
+        if self._dist is not None: # memoize
+            return self._dist
         else:
             dist: float = 0
             prevNode: Node = self.depot
@@ -97,18 +98,22 @@ class Route:
 
             return dist
 
-    def adjacents(self, i: int, depot: Node) -> Tuple[Node, Node]:
-        stops = self.stops
-        if i == 0: return (stops[1] if stops else depot, depot)
-        elif i == len(stops)-1: return (stops[len(stops)-1], depot)
-        return (stops[i-1], stops[i+1])
+    def adjacents(self, i: int) -> Tuple[Node, Node]:
+        if i == 0:
+            return (self.depot, self.stops[1]) if self.stops else (self.depot, self.depot)
+        elif i == len(self.stops) - 1:
+            return (self.stops[i - 1], self.depot)
+        elif 0 < i < len(self.stops) - 1:
+            return (self.stops[i - 1], self.stops[i + 1])
+        else:
+            raise IndexError(f"Provided node index {i} is out of bounds for route of length {len(self.stops)}")
 
     @property
     def demand(self):
         return sum([stop.demand for stop in self.stops])
 
     def normalize(self):
-        """Mutate to be equivalent canonicle representation"""
+        """Mutate to be equivalent canonical representation"""
         if self.stops and self.stops[0].id > self.stops[-1].id:
             self.stops.reverse()
 
@@ -141,47 +146,56 @@ class VRPSolution(Solution):
 
         self.problem: VRPProblem = problem
         self.routes: List[Route] = routes
-        self.depot = problem.depot
         self._objVal: Optional[float] = None
 
     def __str__(self) -> str:
         return '|'.join('-'.join(stop.name() for stop in route.stops) for route in self.routes)
 
-    def check(self) -> bool: pass
+    def check(self) -> bool:
+        pass
+
+    @property
+    def depot(self) -> Node:
+        return self.problem.depot
+
+    @property
+    def totalDistance(self) -> float:
+        return sum(r.distance for r in self.routes)
 
     @property
     def objectiveValue(self) -> float:
         if self._objVal is not None: # memoize
             return self._objVal
         else:
+            self._objVal = self.totalDistance + self.capacityOverflow
             # distance minus infeasibility penalty
-            return sum(r.distance for r in self.routes) - self.capacityOverflow
+            return self._objVal
 
-    def neighbors(self):
-        neighs = []
+    def neighbors(self): # TODO: basic neighbor function - need to allow routes to change length etc.
+        neighbs = []
         # swap a random pair from each route (just an example)
         for route in self.routes:
             if len(route.stops) >= 3:
                 stops: List[Node] = route.stops
-                i: int = random.randrange(len(stops)-1)
-                newRoute = Route(stops[:i]+[stops[i+1], stops[i]]+stops[i+2:], self.depot)
+                i: int = random.randrange(len(stops) - 1)
+                newRoute = Route(stops[:i] + [stops[i + 1], stops[i]] + stops[i + 2:], self.depot)
                 j: int = self.routes.index(route)
-                newRoutes: List[Route] = self.routes[:j]+[newRoute]+self.routes[j+1:]
-                neighs.append(VRPSolution(self.problem, newRoutes))
-        return neighs
+
+                newRoutes: List[Route] = self.routes[:j] + [newRoute] + self.routes[j + 1:]
+                neighbs.append(VRPSolution(self.problem, newRoutes))
+        return neighbs
 
     @classmethod
-    def any(cls, problem: VRPProblem):
+    def anySolution(cls, problem: VRPProblem):
         indss = [range(i, len(problem.nodes), problem.numTrucks) for i in range(problem.numTrucks)]
 
         return cls(problem, [Route([problem.nodes[i] for i in inds], problem.depot) for inds in indss])
 
     @classmethod
-    def rand(cls, prob: VRPProblem):
-        #TODO: What does this do?
-        sol: VRPSolution = cls(prob, [Route([], prob.depot) for _ in range(prob.numTrucks)])
+    def randomSolution(cls, problem: VRPProblem):
+        sol: VRPSolution = cls(problem, [Route([], problem.depot) for _ in range(problem.numTrucks)])
 
-        for node in prob.nodes:
+        for node in problem.nodes:
             random.choice(sol.routes).stops.append(node)
 
         for route in sol.routes:
@@ -198,23 +212,22 @@ class VRPSolution(Solution):
         for route in self.routes:
             i: int = route.stops.index(node)
             if i >= 0:
-                return route.adjacents(i, self.depot)
+                return route.adjacents(i)
 
         raise Exception(f"Node not found: {node}")
 
-    # def solutionDiffDistance(self, other) -> float:
-    #     """Get dist between 2 solutions"""
-    #     # TODO: what does this do?
-    #     # FIXME: buggy
-    #     total: float = 0
-    #     for (i, route) in enumerate(self.routes):
-    #         for stop in route.stops:
-    #             (pre1, suc1) = route.adjacents(i, self.depot)
-    #             (pre2, suc2) = other.adjacents(stop)
-    #             # choose the min of both orders to maintain invariance under route reversal:
-    #             total += min(pre1.distance() + suc1.distance(),  # same order
-    #                          pre1.distance() + suc1.distance()) # swapped
-    #     return total
+    def solutionDiffDistance(self, other) -> float:
+        """Get _dist between 2 solutions"""
+        # FIXME: buggy
+        total: float = 0
+        for (i, route) in enumerate(self.routes):
+            for stop in route.stops:
+                (pre1, suc1) = route.adjacents(i, self.depot)
+                (pre2, suc2) = other.adjacents(stop)
+                # choose the min of both orders to maintain invariance under route reversal:
+                total += min(pre1.distance() + suc1.distance(),  # same order
+                             pre1.distance() + suc1.distance()) # swapped
+        return total
 
     @property
     def capacityOverflow(self) -> float:
@@ -225,14 +238,23 @@ class VRPSolution(Solution):
 
         return capOverflow
 
+    def isFeasible(self) -> bool:
+        return (self.capacityOverflow == 0)
+
     @property
     def isOptimal(self) -> bool:
         # TODO: fill in
         return False
 
     def getFullRoute(self) -> List[Node]:
-        #TODO: what is this doing?
-        return [stop for route in self.routes for stop in [self.depot] + route.stops] + [self.depot]
+        fullRoute: List[Node] = [self.depot]
+        for route in self.routes:
+            assert route.depot == self.depot
+
+            fullRoute.extend(route.stops)
+            fullRoute.append(route.depot)
+
+        return fullRoute
 
     def normalize(self):
         """Mutate to be equivalent canonical representation. Use for debugging, not solving."""
