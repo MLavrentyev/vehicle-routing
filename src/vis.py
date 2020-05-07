@@ -8,7 +8,7 @@ def init():
 
 def display(solution: VRPSolution):
     print(f"sol\t\t: {solution} >> {solution.objectiveValue:.2f}")
-    vis.plot(solution)
+    plot(solution)
 
 
 def plot(sol: VRPSolution):
