@@ -5,7 +5,7 @@ from queue import Empty
 import sys
 import time
 import random
-
+import vis
 import vrpIo
 from problem import Route, Problem, VRPProblem, Solution, VRPSolution
 
@@ -39,10 +39,15 @@ class Solver(ABC):
         pass
 
 
-class VRPSolver(Solver): #TODO: abstract out to Solver clas
+class VRPSolver(Solver):
 
-    def solve(self, display: bool = False) -> VRPSolution:
+    def solve(self, display: bool = False, maximizeObjV: bool = True) -> VRPSolution:
         currState: VRPSolution = self.pickInitSolution()
+        improveCheck: Callable[[float, float], bool] = (lambda o, c: o >= c) if maximizeObjV else (lambda o, c: o <= c)
+
+        if display:
+            vis.init()
+            vis.display(currState)
 
         done: bool = False
         while not done:
@@ -50,18 +55,21 @@ class VRPSolver(Solver): #TODO: abstract out to Solver clas
             # II - look for better neighbor (if none, we are done)
             neighbSolution: VRPSolution
             for neighbSolution in self.neighborhood(currState):
-                if neighbSolution.objectiveValue >= currState.objectiveValue:
+                if improveCheck(neighbSolution.objectiveValue, currState.objectiveValue):
                     currState = neighbSolution
                     done = False
                     break
+
+            if display:
+                vis.display(currState)
 
         return currState
 
     def neighborhood(self, solution: Solution) -> Generator[VRPSolution, None, None]:
         solution = cast(VRPSolution, solution)
 
-        for neighb in solution.neighbors():
-            yield neighb
+        for neighbor in solution.neighbors():
+            yield neighbor
 
     def pickInitSolution(self) -> VRPSolution:
         problem = cast(VRPProblem, self.problem)
@@ -84,26 +92,28 @@ class VRPSolver(Solver): #TODO: abstract out to Solver clas
         return VRPSolution(problem, [Route([problem.nodes[i] for i in inds], problem.depot) for inds in indss])
 
 
-def initSolverProcs(solverFactory: Callable[[Problem], Solver], numSolvers: int, factoryArgs: Tuple = ()) -> Tuple[List[Solver], List[Process]]:
+def initSolverProcs(solverFactory: Callable[[Problem], Solver], numSolvers: int,
+                    factoryArgs: Tuple = (), solveArgs: Tuple = ()) -> Tuple[List[Solver], List[Process]]:
     solvers: List[Solver] = []
     solverProcs: List[Process] = []
     for _ in range(numSolvers):
         newSolver: Solver = solverFactory(*factoryArgs)
         solvers.append(newSolver)
-        solverProcs.append(Process(target=newSolver.solve, args=()))
+        solverProcs.append(Process(target=newSolver.solve, args=solveArgs))
 
     return solvers, solverProcs
 
 
-def runMultiProcSolver(solverFactory: Callable[[Problem], Solver], problem: Problem, numProcs: int = cpu_count()) -> Tuple[Solution, float]:
+def runMultiProcSolver(solverFactory: Callable[[Problem], Solver], problem: Problem,
+                       solveArgs: Tuple = (), numProcs: int = cpu_count()) -> Tuple[Solution, float]:
     queueConn: Queue = Queue()
     startTime: float = time.time()
 
     solvers: List[Solver]
     solverProcs: List[Process]
-    solvers, solverProcs = initSolverProcs(solverFactory, numProcs, factoryArgs=(problem,))
+    solvers, solverProcs = initSolverProcs(solverFactory, numProcs, factoryArgs=(problem,), solveArgs=solveArgs)
 
-    # do a restart, with growing time increments
+    # do o restart, with growing time increments
     timeout: int = 30
     timeoutMult: int = 2
     for solverProc in solverProcs:
@@ -119,7 +129,7 @@ def runMultiProcSolver(solverFactory: Callable[[Problem], Solver], problem: Prob
 
             for solverProc in solverProcs:
                 solverProc.terminate()
-            solvers, solverProcs = initSolverProcs(solverFactory, numProcs, factoryArgs=(problem,))
+            solvers, solverProcs = initSolverProcs(solverFactory, numProcs, factoryArgs=(problem,), solveArgs=solveArgs)
             for solverProc in solverProcs:
                 solverProc.start()
 
@@ -136,7 +146,8 @@ if __name__ == "__main__":
 
     solution: VRPSolution
     solveTime: float
-    solution, solveTime = cast(Tuple[VRPSolution, float], runMultiProcSolver(VRPSolver.factory, problem))
+    solution, solveTime = cast(Tuple[VRPSolution, float],
+                               runMultiProcSolver(VRPSolver.factory, problem, solveArgs=(False, False)))
 
     if len(sys.argv) == 4 and sys.argv[2] == "-f":
         vrpIo.writeSolutionToFile(solution, sys.argv[3])
