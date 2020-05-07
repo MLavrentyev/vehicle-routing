@@ -1,17 +1,19 @@
-
 # IDE settings folders
 .idea/
 .vscode/
-venv/
 
 # Data files
-#results.log
+results.log
 
 # Compiled files
 *.class
 */__pycache__/
 .mypy_cache/
 
+# Virtual environment
 local/
 /venv-pypy/
+venv/
+
+# MyPy
 *.mypy_cache
