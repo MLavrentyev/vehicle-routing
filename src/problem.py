@@ -22,14 +22,6 @@ class Solution(ABC):
     def neighbors(self): # -> List[Solution]
         pass
 
-    @classmethod
-    def anySolution(cls, prob): # -> Solution
-        pass
-
-    @classmethod
-    def randomSolution(cls, prob): # -> Solution
-        pass
-
     def equiv(self, other):
         return self.solutionDiffDistance(other) == 0
 
@@ -184,24 +176,6 @@ class VRPSolution(Solution):
                 newRoutes: List[Route] = self.routes[:j] + [newRoute] + self.routes[j + 1:]
                 neighbs.append(VRPSolution(self.problem, newRoutes))
         return neighbs
-
-    @classmethod
-    def anySolution(cls, problem: VRPProblem):
-        indss = [range(i, len(problem.nodes), problem.numTrucks) for i in range(problem.numTrucks)]
-
-        return cls(problem, [Route([problem.nodes[i] for i in inds], problem.depot) for inds in indss])
-
-    @classmethod
-    def randomSolution(cls, problem: VRPProblem):
-        sol: VRPSolution = cls(problem, [Route([], problem.depot) for _ in range(problem.numTrucks)])
-
-        for node in problem.nodes:
-            random.choice(sol.routes).stops.append(node)
-
-        for route in sol.routes:
-            random.shuffle(route.stops)
-
-        return sol
 
     @property
     def distance(self) -> float:

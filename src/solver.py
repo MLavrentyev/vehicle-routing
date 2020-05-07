@@ -30,10 +30,18 @@ class Solver(ABC):
     def neighborhood(self, solution: Solution) -> Generator[Solution, None, None]:
         pass
 
+    @abstractmethod
+    def pickInitSolution(self) -> Solution:
+        pass
+
+    @abstractmethod
+    def pickAnySolution(self) -> Solution:
+        pass
+
 
 class VRPSolver(Solver): #TODO: abstract out to Solver clas
 
-    def solve(self) -> VRPSolution:
+    def solve(self, display: bool = False) -> VRPSolution:
         currState: VRPSolution = self.pickInitSolution()
 
         done: bool = False
@@ -69,6 +77,11 @@ class VRPSolver(Solver): #TODO: abstract out to Solver clas
             startIdx = endIdx
 
         return VRPSolution(problem, routes)
+
+    def pickAnySolution(self) -> VRPSolution:
+        indss = [range(i, len(problem.nodes), problem.numTrucks) for i in range(problem.numTrucks)]
+
+        return VRPSolution(problem, [Route([problem.nodes[i] for i in inds], problem.depot) for inds in indss])
 
 
 def initSolverProcs(solverFactory: Callable[[Problem], Solver], numSolvers: int, factoryArgs: Tuple = ()) -> Tuple[List[Solver], List[Process]]:
