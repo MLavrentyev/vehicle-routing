@@ -63,7 +63,7 @@ class VRPSolver(Solver):
         startIdx = 0
         for _ in range(problem.numCustomers):
             endIdx = random.randint(0, problem.numCustomers - startIdx)
-            routes.append(Route(nodes[startIdx:endIdx]))
+            routes.append(Route(nodes[startIdx:endIdx], problem.depot))
             startIdx = endIdx
 
         return VRPSolution(problem, routes)

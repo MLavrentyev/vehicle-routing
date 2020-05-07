@@ -1,27 +1,25 @@
+from typing import List
 import random
 import sys
 import time
-
 import vrpIo
 from problem import VRPProblem, VRPSolution
 from solver import VRPSolver
-
 from vis import plot, init
 
 # Run: python3 src/main.py simpleInput/21_4_1.vrp
 
-def display():
-    print(f"sol\t\t: {sol} >> {sol.objectiveValue}")
-    plot(sol)
+def display(solution: VRPSolution):
+    print(f"sol\t\t: {solution} >> {solution.objectiveValue}")
+    plot(solution)
 
 if __name__ == '__main__':
-    # print(f"sys.argv[1]: {sys.argv[1]}")
     problem: VRPProblem = vrpIo.readInput(sys.argv[1])
     print(f"problem: {problem}")
 
     init()
     sol: VRPSolution = VRPSolution.rand(problem).normalize()
-    display()
+    display(sol)
 
     for _ in range(20):
         time.sleep(0.25)
@@ -33,6 +31,6 @@ if __name__ == '__main__':
             print("no better neighbor")
         else:
             sol = best
-            display()
+            display(sol)
 
 
