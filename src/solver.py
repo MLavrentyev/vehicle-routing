@@ -190,14 +190,13 @@ def runMultiProcSolver(solverFactory: Callable[[Problem], Solver], problem: Prob
     return solution, (time.time() - startTime)
 
 
-
 if __name__ == "__main__":
     problem: VRPProblem = vrpIo.readInput(sys.argv[1])
 
     solution: VRPSolution
     solveTime: float
     solution, solveTime = cast(Tuple[VRPSolution, float],
-                               runMultiProcSolver(VRPSolver.factory, problem, solveArgs=(False, False), numProcs=1))
+                               runMultiProcSolver(VRPSolver.factory, problem, solveArgs=(True, False), numProcs=1))
 
     if len(sys.argv) == 4 and sys.argv[2] == "-f":
         vrpIo.writeSolutionToFile(solution, sys.argv[3])
