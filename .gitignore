@@ -4,6 +4,7 @@
 
 # Data files
 results.log
+*.sol
 
 # Compiled files
 *.class
