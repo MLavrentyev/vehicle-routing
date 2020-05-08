@@ -1,7 +1,8 @@
 import random
-from typing import List, Tuple, TypeVar, Optional
+from typing import List, Tuple, Optional, Generator, Callable
 from abc import ABC
 import math
+import copy
 import itertools
 import functools
 
@@ -19,7 +20,7 @@ class Solution(ABC):
     def objectiveValue(self) -> float:
         pass
 
-    def neighbors(self): # -> List[Solution]
+    def neighbors(self) -> Generator['Solution', None, None]:
         pass
 
     def equiv(self, other):
@@ -42,6 +43,9 @@ class Node:
 
     def __eq__(self, otherNode) -> bool:
         return self.demand == otherNode.demand and self.x == otherNode.x and self.y == otherNode.y
+
+    def __hash__(self) -> int:
+        return hash(self.id)
 
     def __str__(self):
         return str(self.id)
@@ -74,8 +78,20 @@ class Route:
     def __repr__(self) -> str:
         return f"(Route {str(self.stops)})"
 
+    def __contains__(self, node: Node) -> bool:
+        return node in self.stops
+
+    def __len__(self):
+        return len(self.stops)
+
     def addStop(self, node: Node) -> None:
         self.stops.append(node)
+
+    def insertStop(self, node: Node, idx: int) -> None:
+        self.stops.insert(idx, node)
+
+    def removeStop(self, node: Node) -> None:
+        self.stops.remove(node)
 
     @property
     def distance(self) -> float:
@@ -163,19 +179,38 @@ class VRPSolution(Solution):
             # distance minus infeasibility penalty
             return self._objVal
 
-    def neighbors(self): # TODO: basic neighbor function - need to allow routes to change length etc.
-        neighbs = []
-        # swap a random pair from each route (just an example)
-        for route in self.routes:
-            if len(route.stops) >= 3:
-                stops: List[Node] = route.stops
-                i: int = random.randrange(len(stops) - 1)
-                newRoute = Route(stops[:i] + [stops[i + 1], stops[i]] + stops[i + 2:], self.depot)
-                j: int = self.routes.index(route)
+    @property
+    def infeasibilityPenalty(self) -> float:
+        return 5 * self.capacityOverflow
 
-                newRoutes: List[Route] = self.routes[:j] + [newRoute] + self.routes[j + 1:]
-                neighbs.append(VRPSolution(self.problem, newRoutes))
-        return neighbs
+    def neighbors(self) -> Generator['VRPSolution', None, None]:
+        # generates neighbors by moving stops to a new index in the unioned routing
+        swapFromIdxs: List[Tuple[int, int]] = [] # format: [(routeIdx, stopIdxInRoute), ...]
+        swapToIdxs: List[Tuple[int, int]] = []
+        for rIdx in range(len(self.routes)):
+            swapFromIdxs += [(rIdx, nIdx) for nIdx in range(len(self.routes[rIdx]))]
+            # allow appending to end of route - add 1 extra index for the possibility
+            swapToIdxs += [(rIdx, nIdx) for nIdx in range(len(self.routes[rIdx]) + 1)]
+        random.shuffle(swapFromIdxs)
+
+        radius: int = 100
+        for fromIdx in swapFromIdxs:
+            # randomize order of offsets
+            offsets: List[int] = list(range(-radius, radius + 1))
+            random.shuffle(offsets)
+
+            for offset in offsets:
+                # get the place to move the stop to by adding the offset in the ordered route list
+                toIdx: Tuple[int, int] = swapToIdxs[(swapToIdxs.index(fromIdx) + offset) % len(swapToIdxs)]
+
+                # create new routes with the changes
+                newRoutes: List[Route] = copy.deepcopy(self.routes)
+                newRoutes[toIdx[0]].insertStop(self.routes[fromIdx[0]].stops[fromIdx[1]], toIdx[1])
+                # remove stop (relies on stop uniqueness
+                newRoutes[fromIdx[0]].removeStop(self.routes[fromIdx[0]].stops[fromIdx[1]])
+
+                yield VRPSolution(self.problem, newRoutes)
+
 
     @property
     def distance(self) -> float:
