@@ -15,11 +15,11 @@ if __name__ == '__main__':
     solver = VRPSolver()
 
     vis.init()
-    sol: VRPSolution = solver.pickInitSolution().normalize()
+    sol: VRPSolution = solver.pickRandomSolution().normalize()
     vis.display(sol)
 
     for _ in range(20):
-        neighbs: List[VRPSolution] = sol.neighbors() + [sol]
+        neighbs: List[VRPSolution] = list(sol.neighbors()) + [sol]
         neighbs.sort(key = (lambda n: n.distance))
 
         best = neighbs[0]

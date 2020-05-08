@@ -6,9 +6,10 @@ def init():
     plt.ion()
 
 
-def display(solution: VRPSolution):
-    print(f"sol\t\t: {solution} >> {solution.objectiveValue:.2f}")
-    plot(solution)
+def display(sol: VRPSolution, doPlot: bool = False):
+    print(f"sol\t\t: {sol} >> {sol.objectiveValue:.2f}  (d: {sol.distance:.2f}, inf: {sol.infeasibilityPenalty:.2f})")
+    if doPlot:
+        plot(sol)
 
 
 def plot(sol: VRPSolution):
@@ -19,8 +20,8 @@ def plot(sol: VRPSolution):
         plt.plot(xs, ys)
 
         ss = [stop.demand * 10 for stop in stops]
-        plt.scatter(xs, ys, ss)
-        plt.title(f"Feasible: {sol.isFeasible()} | Score: {sol.objectiveValue}")
+        plt.scatter(xs, ys)
+        plt.title(f"Feasible: {sol.isFeasible()} | Score: {sol.objectiveValue:.2f}")
 
     plt.draw()
     plt.pause(0.0001)
