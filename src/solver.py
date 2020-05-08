@@ -7,7 +7,9 @@ import time
 import random
 import vis
 import vrpIo
-from problem import Route, Problem, VRPProblem, Solution, VRPSolution
+import itertools
+import math
+from problem import Route, Node, Problem, VRPProblem, Solution, VRPSolution
 
 
 
@@ -31,11 +33,7 @@ class Solver(ABC):
         pass
 
     @abstractmethod
-    def neighborhood(self, solution: Solution) -> Generator[Solution, None, None]:
-        pass
-
-    @abstractmethod
-    def pickInitSolution(self) -> Solution:
+    def pickRandomSolution(self) -> Solution:
         pass
 
     @abstractmethod
