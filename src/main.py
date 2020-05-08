@@ -20,7 +20,7 @@ if __name__ == '__main__':
 
     for _ in range(20):
         neighbs: List[VRPSolution] = list(sol.neighbors()) + [sol]
-        neighbs.sort(key = (lambda n: n.distance))
+        neighbs.sort(key = (lambda n: n.totalDistance))
 
         best = neighbs[0]
         if best == sol:

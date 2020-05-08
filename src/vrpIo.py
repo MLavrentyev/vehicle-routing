@@ -26,7 +26,7 @@ def readInput(file: str) -> VRPProblem:
 def formatSolution(solution: VRPSolution) -> List[str]:
     lines = []
     # add solution header (objective value, is optimal?)
-    lines.append(f"{solution.distance} {int(solution.isOptimal)}")
+    lines.append(f"{solution.totalDistance} {int(solution.isOptimal)}")
     # add route solutions
     for route in solution.routes:
         lines.append(str(route))
@@ -47,5 +47,5 @@ def printSolution(solution: VRPSolution, solveTime: float) -> None:
 
     print(f"Instance: {solution.problem.file}"
           f" Time: {solveTime:.2f}"
-          f" Result: {solution.distance:.2f}"
+          f" Result: {solution.totalDistance:.2f}"
           f" Solution {int(solution.isOptimal)} {' '.join(lines[1:])}")

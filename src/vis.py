@@ -7,7 +7,7 @@ def init():
 
 
 def display(sol: VRPSolution, doPlot: bool = False):
-    print(f"sol\t\t: {sol} >> {sol.objectiveValue:.2f}  (d: {sol.distance:.2f}, inf: {sol.infeasibilityPenalty:.2f})")
+    print(f"sol\t\t: {sol} >> {sol.objectiveValue:.2f}  (d: {sol.totalDistance:.2f}, inf: {sol.infeasibilityPenalty:.2f})")
     if doPlot:
         plot(sol)
 

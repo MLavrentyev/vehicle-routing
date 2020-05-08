@@ -134,6 +134,7 @@ class Route:
 
         for nextNode in self.stops + [self.depot]:
             dist += prevNode.distance(nextNode)
+            prevNode = nextNode
 
         return dist
 
@@ -197,17 +198,13 @@ class VRPSolution(Solution):
         return self.problem.depot
 
     @property
-    def totalDistance(self) -> float:
-        return sum(r.distance for r in self.routes)
-
-    @property
     def objectiveValue(self) -> float:
         # distance plus infeasibility penalty
         return self.totalDistance + self.infeasibilityPenalty
 
     @property
     def infeasibilityPenalty(self) -> float:
-        return (5 if self.capacityOverflow > self.problem.numCustomers * 10 else 1) * self.capacityOverflow
+        return (10 if self.capacityOverflow > self.problem.numCustomers * 5 else 2) * self.capacityOverflow
 
     def neighbors(self) -> Generator['VRPSolution', None, None]:
         # generates neighbors by moving stops to a new index in the unioned routing
@@ -238,7 +235,7 @@ class VRPSolution(Solution):
                 yield VRPSolution(self.problem, newRoutes)
 
     @property
-    def distance(self) -> float:
+    def totalDistance(self) -> float:
         return sum([route.distance for route in self.routes])
 
     def getAdjacentNodes(self, node: Node) -> Tuple[Node, Node]:
