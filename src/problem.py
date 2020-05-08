@@ -60,13 +60,26 @@ class Node:
         return f'{self.id:03}'
 
 
+def getClosestNode(nodeSet: List[Node], closestTo: Node) -> Tuple[Node, int]:
+    assert nodeSet
+
+    closestIdx: int = 0
+    minDist: float = nodeSet[closestIdx].distance(closestTo)
+
+    for n in range(len(nodeSet)):
+        nodeDist: float = nodeSet[n].distance(closestTo)
+        if nodeDist < minDist:
+            closestIdx = n
+            minDist = nodeDist
+
+    return nodeSet[closestIdx], closestIdx
+
+
 class Route:
     def __init__(self, stops: List[Node], depot: Node):
         # note: stops should never include the depot stop at the start or end
         self.stops: List[Node] = stops
         self.depot: Node = depot
-
-        self._dist: Optional[float] = None
 
     def __str__(self) -> str:
         nodeIds: List[str] = [str(n) for n in self.stops]
@@ -93,18 +106,36 @@ class Route:
     def removeStop(self, node: Node) -> None:
         self.stops.remove(node)
 
+    def greedyReorder(self) -> 'Route':
+        newOrder: List[Node] = []
+
+        stops: List[Node] = self.stops[:]
+        if self.stops:
+            node: Node
+            idx: int
+            node, idx = getClosestNode(stops, self.depot)
+            stops.pop(idx)
+            newOrder.append(node)
+
+            while stops:
+                node, idx = getClosestNode(stops, newOrder[-1])
+                stops.pop(idx)
+                newOrder.append(node)
+
+            assert set(newOrder) == set(self.stops)
+            self.stops = newOrder
+
+        return self
+
     @property
     def distance(self) -> float:
-        if self._dist is not None: # memoize
-            return self._dist
-        else:
-            dist: float = 0
-            prevNode: Node = self.depot
+        dist: float = 0
+        prevNode: Node = self.depot
 
-            for nextNode in self.stops + [self.depot]:
-                dist += prevNode.distance(nextNode)
+        for nextNode in self.stops + [self.depot]:
+            dist += prevNode.distance(nextNode)
 
-            return dist
+        return dist
 
     def adjacents(self, i: int) -> Tuple[Node, Node]:
         if i == 0:
@@ -117,10 +148,10 @@ class Route:
             raise IndexError(f"Provided node index {i} is out of bounds for route of length {len(self.stops)}")
 
     @property
-    def demand(self):
+    def demand(self) -> int:
         return sum([stop.demand for stop in self.stops])
 
-    def normalize(self):
+    def normalize(self) -> 'Route':
         """Mutate to be equivalent canonical representation"""
         if self.stops and self.stops[0].id > self.stops[-1].id:
             self.stops.reverse()
@@ -154,7 +185,6 @@ class VRPSolution(Solution):
 
         self.problem: VRPProblem = problem
         self.routes: List[Route] = routes
-        self._objVal: Optional[float] = None
 
     def __str__(self) -> str:
         return ' | '.join('-'.join(stop.name() for stop in route.stops) for route in self.routes)
@@ -172,16 +202,12 @@ class VRPSolution(Solution):
 
     @property
     def objectiveValue(self) -> float:
-        if self._objVal is not None: # memoize
-            return self._objVal
-        else:
-            self._objVal = self.totalDistance + self.infeasibilityPenalty
-            # distance plus infeasibility penalty
-            return self._objVal
+        # distance plus infeasibility penalty
+        return self.totalDistance + self.infeasibilityPenalty
 
     @property
     def infeasibilityPenalty(self) -> float:
-        return 5 * self.capacityOverflow
+        return (5 if self.capacityOverflow > self.problem.numCustomers * 10 else 1) * self.capacityOverflow
 
     def neighbors(self) -> Generator['VRPSolution', None, None]:
         # generates neighbors by moving stops to a new index in the unioned routing
@@ -211,7 +237,6 @@ class VRPSolution(Solution):
 
                 yield VRPSolution(self.problem, newRoutes)
 
-
     @property
     def distance(self) -> float:
         return sum([route.distance for route in self.routes])
@@ -225,18 +250,18 @@ class VRPSolution(Solution):
 
         raise Exception(f"Node not found: {node}")
 
-    def solutionDiffDistance(self, other) -> float:
-        """Get _dist between 2 solutions"""
-        # FIXME: buggy
-        total: float = 0
-        for (i, route) in enumerate(self.routes):
-            for stop in route.stops:
-                (pre1, suc1) = route.adjacents(i, self.depot)
-                (pre2, suc2) = other.adjacents(stop)
-                # choose the min of both orders to maintain invariance under route reversal:
-                total += min(pre1.distance() + suc1.distance(),  # same order
-                             pre1.distance() + suc1.distance()) # swapped
-        return total
+    # def solutionDiffDistance(self, other) -> float:
+    #     """Get _dist between 2 solutions"""
+    #     # FIXME: buggy
+    #     total: float = 0
+    #     for (i, route) in enumerate(self.routes):
+    #         for stop in route.stops:
+    #             (pre1, suc1) = route.adjacents(i, self.depot)
+    #             (pre2, suc2) = other.adjacents(stop)
+    #             # choose the min of both orders to maintain invariance under route reversal:
+    #             total += min(pre1.distance() + suc1.distance(),  # same order
+    #                          pre1.distance() + suc1.distance()) # swapped
+    #     return total
 
     @property
     def capacityOverflow(self) -> float:
@@ -265,10 +290,17 @@ class VRPSolution(Solution):
 
         return fullRoute
 
-    def normalize(self):
+    def normalize(self) -> None:
         """Mutate to be equivalent canonical representation. Use for debugging, not solving."""
         for route in self.routes:
             route.normalize()
         self.routes.sort(key = lambda r: (len(r.stops), r.stops[0].id if r.stops else -1))
+
+        return self
+
+    def greedyRouteReorder(self) -> 'VRPSolution':
+        # greedily reorder routes in place without swapping nodes between routes
+        for route in self.routes:
+            route.greedyReorder()
 
         return self

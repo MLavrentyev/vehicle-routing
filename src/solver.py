@@ -9,8 +9,7 @@ import vis
 import vrpIo
 import itertools
 import math
-from problem import Route, Node, Problem, VRPProblem, Solution, VRPSolution
-
+from problem import Route, Node, Problem, VRPProblem, Solution, VRPSolution, getClosestNode
 
 
 class Solver(ABC):
@@ -69,7 +68,6 @@ class VRPSolver(Solver):
                         currState = neighbSolution
                         done = False
                         break
-
                 # if the current state is infeasible and we didn't improve this round, randomly pick a neighbor
                 if not currState.isFeasible() and done:
                     currState = currState.neighbors().__next__()
@@ -78,7 +76,7 @@ class VRPSolver(Solver):
             if display and not done:
                 vis.display(currState, doPlot=False)
 
-        return currState
+        return currState.greedyRouteReorder()
 
     def pickRandomSolution(self) -> VRPSolution:
         problem = cast(VRPProblem, self.problem)
@@ -116,22 +114,11 @@ class VRPSolver(Solver):
         routes: List[Route] = []
         sector: List[Node]
         for sector in sectors:
-            route: Route = Route(([sector.pop()] if sector else []), problem.depot)
-
-            while sector:
-                closestIdx: int = 0
-                minDist: float = sector[closestIdx].distance(route.stops[-1])
-                for n in range(len(sector)):
-                    nodeDist: float = sector[n].distance(route.stops[-1])
-                    if nodeDist < minDist:
-                        closestIdx = n
-                        minDist = nodeDist
-                route.addStop(sector.pop(closestIdx))
-
+            route: Route = Route(sector, problem.depot)
+            route.greedyReorder()
             routes.append(route)
 
         return VRPSolution(problem, routes)
-
 
     def pickAnySolution(self) -> VRPSolution:
         problem: VRPProblem = cast(VRPProblem, self.problem)
