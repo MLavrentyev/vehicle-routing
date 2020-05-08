@@ -157,7 +157,7 @@ class VRPSolution(Solution):
         self._objVal: Optional[float] = None
 
     def __str__(self) -> str:
-        return '|'.join('-'.join(stop.name() for stop in route.stops) for route in self.routes)
+        return ' | '.join('-'.join(stop.name() for stop in route.stops) for route in self.routes)
 
     def check(self) -> bool:
         pass
@@ -175,8 +175,8 @@ class VRPSolution(Solution):
         if self._objVal is not None: # memoize
             return self._objVal
         else:
-            self._objVal = self.totalDistance + self.capacityOverflow
-            # distance minus infeasibility penalty
+            self._objVal = self.totalDistance + self.infeasibilityPenalty
+            # distance plus infeasibility penalty
             return self._objVal
 
     @property
