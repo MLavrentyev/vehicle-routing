@@ -1,5 +1,5 @@
 import random
-from typing import List, Tuple, Optional, Generator, Callable
+from typing import List, Tuple, Optional, Generator, Callable, TypeVar
 from abc import ABC
 import math
 import copy
@@ -73,6 +73,13 @@ def getClosestNode(nodeSet: List[Node], closestTo: Node) -> Tuple[Node, int]:
             minDist = nodeDist
 
     return nodeSet[closestIdx], closestIdx
+
+
+T = TypeVar("T")
+def find(target: T, myList: List[T]) -> Generator[int, None, None]:
+    for i in range(len(myList)):
+        if myList[i] == target:
+            yield i
 
 
 class Route:
@@ -222,11 +229,13 @@ class VRPSolution(Solution):
 
     @property
     def infeasibilityPenalty(self) -> float:
+        singletonDists: float = 2.0 * sum(self.problem.depot.distance(node) for node in self.problem.nodes)
+
         multiplier: float
         if self.capacityOverflow >= 0.01 * self.problem.totalDemand:
-            multiplier = 0.7 * self.problem.greedyDistance
+            multiplier = 0.1 * singletonDists
         else:
-            multiplier = 0.5 * self.problem.greedyDistance
+            multiplier = 0.2 * singletonDists
 
         return multiplier * self.capacityOverflow
 
@@ -305,7 +314,8 @@ class VRPSolution(Solution):
         return False
 
     def getFullRoute(self) -> List[Node]:
-        fullRoute: List[Node] = [self.depot]
+        # returns full route without the starting depot stop
+        fullRoute: List[Node] = []
         for route in self.routes:
             assert route.depot == self.depot
 
@@ -314,7 +324,7 @@ class VRPSolution(Solution):
 
         return fullRoute
 
-    def normalize(self) -> None:
+    def normalize(self) -> 'VRPSolution':
         """Mutate to be equivalent canonical representation. Use for debugging, not solving."""
         for route in self.routes:
             route.normalize()
@@ -328,3 +338,56 @@ class VRPSolution(Solution):
             route.greedyReorder()
 
         return self
+
+
+class VRPSolution2Op(VRPSolution):
+
+    def neighbors(self) -> Generator['VRPSolution2Op', None, None]:
+        #TODO: implement 2-op neighborhoods
+        fullRoute: List[Node] = self.getFullRoute()
+        maxEdgeIdx: int = self.problem.numCustomers + self.problem.numTrucks
+
+        edge1Idxs: List[int] = list(range(1, maxEdgeIdx + 1))
+        random.shuffle(edge1Idxs)
+
+        for edge1Idx in edge1Idxs:
+            edge2Idxs: List[int] = list(range(edge1Idx, maxEdgeIdx + 1))
+            for edge2Idx in edge2Idxs:
+                yield VRPSolution2Op(self.problem,
+                                     self.parseRoutes(VRPSolution2Op.swapEdges(fullRoute, edge1Idx, edge2Idx)))
+
+    def randomNeighbor(self) -> 'VRPSolution2Op':
+        fullRoute: List[Node] = self.getFullRoute()
+
+        # pick two distinct edge ending points
+        edgeEnds: List[int] = random.sample(range(1, len(self.getFullRoute())), 2)
+        edge1Idx: int = min(edgeEnds)
+        edge2Idx: int = max(edgeEnds)
+
+        fullRoute = VRPSolution2Op.swapEdges(fullRoute, edge1Idx, edge2Idx)
+        return VRPSolution2Op(self.problem, self.parseRoutes(fullRoute))
+
+    @staticmethod
+    def swapEdges(fullRoute: List[Node], edge1Idx: int, edge2Idx: int) -> List[Node]:
+        seg1: List[Node] = fullRoute[:edge1Idx]
+        seg2: List[Node] = fullRoute[edge1Idx:edge2Idx]
+        seg3: List[Node] = fullRoute[edge2Idx:]
+
+        seg2.reverse()
+
+        return seg1 + seg2 + seg3
+
+    def parseRoutes(self, fullRoute: List[Node]) -> List[Route]:
+        routes: List[Route] = []
+        # TODO: debugging asserts for now
+        assert routes[-1] == self.problem.depot
+
+        prevRouteEndIdx: int = -1
+        for routeEndIdx in find(self.problem.depot, fullRoute):
+            routes.append(Route(fullRoute[prevRouteEndIdx + 1:routeEndIdx], self.problem.depot))
+            prevRouteEndIdx = routeEndIdx
+
+        assert len(routes) == self.problem.numTrucks
+        return routes
+
+
