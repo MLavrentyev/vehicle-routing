@@ -97,6 +97,10 @@ class Route:
     def __len__(self):
         return len(self.stops)
 
+    def isFeasible(self, truckCap: int) -> bool:
+        demand: int = sum(node.demand for node in self.stops)
+        return demand <= truckCap
+
     def addStop(self, node: Node) -> None:
         self.stops.append(node)
 
@@ -173,11 +177,25 @@ class VRPProblem(Problem):
         self.depot: Node = depot
         self.nodes: List[Node] = []
 
+        self._greedyDist: Optional[float] = None
+
     def __repr__(self) -> str:
         return f"(Problem <#custs {self.numCustomers}>, <#trucks {self.numTrucks}>, <truckCap {self.truckCapacity}>)"
 
     def addNode(self, node: Node) -> None:
         self.nodes.append(node)
+
+    @property
+    def totalDemand(self) -> int:
+        return sum(node.demand for  node in self.nodes)
+
+    @property
+    def greedyDistance(self) -> float:
+        if not self._greedyDist:
+            route = Route(self.nodes, self.depot)
+            route.greedyReorder()
+            self._greedyDist = route.distance
+        return self._greedyDist
 
 
 class VRPSolution(Solution):
@@ -204,7 +222,13 @@ class VRPSolution(Solution):
 
     @property
     def infeasibilityPenalty(self) -> float:
-        return (10 if self.capacityOverflow > self.problem.numCustomers * 5 else 2) * self.capacityOverflow
+        multiplier: float
+        if self.capacityOverflow >= 0.01 * self.problem.totalDemand:
+            multiplier = 0.7 * self.problem.greedyDistance
+        else:
+            multiplier = 0.5 * self.problem.greedyDistance
+
+        return multiplier * self.capacityOverflow
 
     def neighbors(self) -> Generator['VRPSolution', None, None]:
         # generates neighbors by moving stops to a new index in the unioned routing
@@ -216,7 +240,7 @@ class VRPSolution(Solution):
             swapToIdxs += [(rIdx, nIdx) for nIdx in range(len(self.routes[rIdx]) + 1)]
         random.shuffle(swapFromIdxs)
 
-        radius: int = 100
+        radius: int = len(swapToIdxs) // 2
         for fromIdx in swapFromIdxs:
             # randomize order of offsets
             offsets: List[int] = list(range(-radius, radius + 1))
@@ -233,6 +257,9 @@ class VRPSolution(Solution):
                 newRoutes[fromIdx[0]].removeStop(self.routes[fromIdx[0]].stops[fromIdx[1]])
 
                 yield VRPSolution(self.problem, newRoutes)
+
+    def randomNeighbor(self) -> 'VRPSolution':
+        return self.neighbors().__next__()
 
     @property
     def totalDistance(self) -> float:
