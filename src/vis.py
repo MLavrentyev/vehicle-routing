@@ -6,8 +6,9 @@ def init():
     plt.ion()
 
 
-def display(sol: VRPSolution, doPlot: bool = False):
-    print(f"sol\t\t: {sol} >> {sol.objectiveValue:.2f}  (d: {sol.totalDistance:.2f}, inf: {sol.infeasibilityPenalty:.2f})")
+def display(sol: VRPSolution, doPlot: bool = False, showSol: bool = False):
+    print(f"sol\t: {sol if showSol else ''} >> {sol.objectiveValue:.2f}"
+          f"  (d: {sol.totalDistance:.2f}, inf: {sol.capacityOverflow:.2f})")
     if doPlot:
         plot(sol)
 
