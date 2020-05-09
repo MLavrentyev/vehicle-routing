@@ -380,7 +380,7 @@ class VRPSolution2Op(VRPSolution):
     def parseRoutes(self, fullRoute: List[Node]) -> List[Route]:
         routes: List[Route] = []
         # TODO: debugging asserts for now
-        assert routes[-1] == self.problem.depot
+        assert fullRoute[-1] == self.problem.depot
 
         prevRouteEndIdx: int = -1
         for routeEndIdx in find(self.problem.depot, fullRoute):

@@ -134,7 +134,7 @@ class VRPSolver2OpSimAnneal(VRPSolver):
         annealingTemp: float = 5000
         problem = cast(VRPProblem, self.problem)
 
-        currState: VRPSolution = self.pickSectoredSolution()
+        currState: VRPSolution = self.pickRandomSolution()
         improveCheck: Callable[[float, float], bool] = (lambda o, c: o > c) if maximizeObjV else (lambda o, c: o < c)
 
         if display:
@@ -143,7 +143,7 @@ class VRPSolver2OpSimAnneal(VRPSolver):
         numBadSteps: int = 0
         numAccSteps: int = 0
         numSteps: int = 0
-        while not (numBadSteps >= 5 and (numSteps > 0 and numAccSteps/numSteps < 0.02) and currState.isFeasible()):
+        while not (numBadSteps >= 10 and (numSteps > 0 and numAccSteps/numSteps < 0.1) and currState.isFeasible()):
 
             neighb: VRPSolution = currState.randomNeighbor()
             if (improveCheck(neighb.objectiveValue, currState.objectiveValue)) or \
@@ -156,7 +156,6 @@ class VRPSolver2OpSimAnneal(VRPSolver):
             # Anneal temperature every certain number of steps
             if numSteps % (problem.numCustomers * (problem.numCustomers - 1)) == 0:
                 print(f"Annealing from {annealingTemp:.3f}. Acceptance percentage: {numAccSteps/numSteps:.2f}.")
-                time.sleep(1)
                 annealingTemp *= 0.85
 
             # plot display of current solution
@@ -166,15 +165,15 @@ class VRPSolver2OpSimAnneal(VRPSolver):
         return currState
 
     def pickRandomSolution(self) -> VRPSolution2Op:
-        baseSolution: VRPSolution = super(self).pickRandomSolution()
+        baseSolution: VRPSolution = super().pickRandomSolution()
         return VRPSolution2Op(baseSolution.problem, baseSolution.routes)
 
     def pickSectoredSolution(self) -> VRPSolution2Op:
-        baseSolution: VRPSolution = super(self).pickSectoredSolution()
+        baseSolution: VRPSolution = super().pickSectoredSolution()
         return VRPSolution2Op(baseSolution.problem, baseSolution.routes)
 
     def pickAnySolution(self) -> VRPSolution2Op:
-        baseSolution: VRPSolution = super(self).pickAnySolution()
+        baseSolution: VRPSolution = super().pickAnySolution()
         return VRPSolution2Op(baseSolution.problem, baseSolution.routes)
 
 
@@ -229,11 +228,12 @@ def runMultiProcSolver(solverFactory: Callable[[Problem], Solver], problem: Prob
 
 if __name__ == "__main__":
     problem: VRPProblem = vrpIo.readInput(sys.argv[1])
+    solverType: type = VRPSolver2OpSimAnneal
 
     solution: VRPSolution
     solveTime: float
     solution, solveTime = cast(Tuple[VRPSolution, float],
-                               runMultiProcSolver(VRPSolver.factory, problem, solveArgs=(True, False), numProcs=3))
+                               runMultiProcSolver(solverType.factory, problem, solveArgs=(True, False), numProcs=3))
 
     if len(sys.argv) == 4 and sys.argv[2] == "-f":
         vrpIo.writeSolutionToFile(solution, sys.argv[3])
