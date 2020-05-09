@@ -9,7 +9,7 @@ import vis
 import vrpIo
 import itertools
 import math
-from problem import Route, Node, Problem, VRPProblem, Solution, VRPSolution, getClosestNode
+from problem import Route, Node, Problem, VRPProblem, Solution, VRPSolution, getClosestNode, VRPSolution2Op
 
 
 class Solver(ABC):
@@ -43,34 +43,38 @@ class Solver(ABC):
 class VRPSolver(Solver):
 
     def solve(self, display: bool = False, maximizeObjV: bool = True) -> VRPSolution:
-        annealingTemp: float = 0.97
-        problem = cast(VRPProblem, self.problem)
+        doRandJumpProb: float = 0.1
 
         currState: VRPSolution = self.pickSectoredSolution()
         improveCheck: Callable[[float, float], bool] = (lambda o, c: o > c) if maximizeObjV else (lambda o, c: o < c)
 
         if display:
             vis.init()
+            vis.display(currState)
 
-        numBadSteps: int = 0
-        numAccSteps: int = 0
-        numSteps: int = 0
-        while not (numBadSteps >= 5 and (numSteps > 0 and numAccSteps/numSteps > 0.02) and currState.isFeasible()):
-            # plot display of current solution
-            if display:
+        done: bool = False
+        while not done:
+            done = True
+
+            # do random jump with some probability
+            if random.random() <= doRandJumpProb:
+                currState = currState.neighbors().__next__()
+                done = False
+            else:
+                # iterative improvement - look for better neighbor (if none, we are done)
+                neighbSolution: VRPSolution
+                for neighbSolution in currState.neighbors():
+                    if improveCheck(neighbSolution.objectiveValue, currState.objectiveValue):
+                        currState = neighbSolution
+                        done = False
+                        break
+                # if the current state is infeasible and we didn't improve this round, randomly pick a neighbor
+                if not currState.isFeasible() and done:
+                    currState = currState.neighbors().__next__()
+                    done = False
+
+            if display and not done:
                 vis.display(currState, doPlot=False)
-
-            neighb: VRPSolution = currState.randomNeighbor()
-            if (improveCheck(neighb.objectiveValue, currState.objectiveValue)) or\
-               (random.random() <= math.exp((neighb.objectiveValue - currState.objectiveValue) / annealingTemp)):
-                currState = neighb
-                numBadSteps = 0 if improveCheck(neighb.objectiveValue, currState.objectiveValue) else numBadSteps + 1
-                numAccSteps += 1
-
-            numSteps += 1
-            # Anneal temperature every certain number of steps
-            if numSteps % (problem.numCustomers * (problem.numCustomers - 1)) == 0:
-                annealingTemp *= 0.95
 
         return currState
 
@@ -103,7 +107,7 @@ class VRPSolver(Solver):
         for node in problem.nodes:
             # angle from 0 to 2pi
             nodeAngle: float = math.atan2(node.y - problem.depot.y, node.x - problem.depot.x) + math.pi
-            sectorIdx: int = math.floor(nodeAngle / sliceSizeRad)
+            sectorIdx: int = math.floor(nodeAngle / sliceSizeRad) % problem.numTrucks
             sectors[sectorIdx].append(node)
 
         # Generate greedy routing for each sector
@@ -122,6 +126,56 @@ class VRPSolver(Solver):
         indss = [range(i, len(problem.nodes), problem.numTrucks) for i in range(problem.numTrucks)]
 
         return VRPSolution(problem, [Route([problem.nodes[i] for i in inds], problem.depot) for inds in indss])
+
+
+class VRPSolver2OpSimAnneal(VRPSolver):
+
+    def solve(self, display: bool = False, maximizeObjV: bool = True) -> VRPSolution:
+        annealingTemp: float = 5000
+        problem = cast(VRPProblem, self.problem)
+
+        currState: VRPSolution = self.pickSectoredSolution()
+        improveCheck: Callable[[float, float], bool] = (lambda o, c: o > c) if maximizeObjV else (lambda o, c: o < c)
+
+        if display:
+            vis.init()
+
+        numBadSteps: int = 0
+        numAccSteps: int = 0
+        numSteps: int = 0
+        while not (numBadSteps >= 5 and (numSteps > 0 and numAccSteps/numSteps < 0.02) and currState.isFeasible()):
+
+            neighb: VRPSolution = currState.randomNeighbor()
+            if (improveCheck(neighb.objectiveValue, currState.objectiveValue)) or \
+                    (random.random() <= math.exp((currState.objectiveValue - neighb.objectiveValue) / annealingTemp)):
+                currState = neighb
+                numBadSteps = 0 if improveCheck(neighb.objectiveValue, currState.objectiveValue) else numBadSteps + 1
+                numAccSteps += 1
+
+            numSteps += 1
+            # Anneal temperature every certain number of steps
+            if numSteps % (problem.numCustomers * (problem.numCustomers - 1)) == 0:
+                print(f"Annealing from {annealingTemp:.3f}. Acceptance percentage: {numAccSteps/numSteps:.2f}.")
+                time.sleep(1)
+                annealingTemp *= 0.85
+
+            # plot display of current solution
+            if display:
+                vis.display(currState, doPlot=False)
+
+        return currState
+
+    def pickRandomSolution(self) -> VRPSolution2Op:
+        baseSolution: VRPSolution = super(self).pickRandomSolution()
+        return VRPSolution2Op(baseSolution.problem, baseSolution.routes)
+
+    def pickSectoredSolution(self) -> VRPSolution2Op:
+        baseSolution: VRPSolution = super(self).pickSectoredSolution()
+        return VRPSolution2Op(baseSolution.problem, baseSolution.routes)
+
+    def pickAnySolution(self) -> VRPSolution2Op:
+        baseSolution: VRPSolution = super(self).pickAnySolution()
+        return VRPSolution2Op(baseSolution.problem, baseSolution.routes)
 
 
 def initSolverProcs(solverFactory: Callable[[Problem], Solver], numSolvers: int, queueConn: Queue,
@@ -179,7 +233,7 @@ if __name__ == "__main__":
     solution: VRPSolution
     solveTime: float
     solution, solveTime = cast(Tuple[VRPSolution, float],
-                               runMultiProcSolver(VRPSolver.factory, problem, solveArgs=(True, False), numProcs=1))
+                               runMultiProcSolver(VRPSolver.factory, problem, solveArgs=(True, False), numProcs=3))
 
     if len(sys.argv) == 4 and sys.argv[2] == "-f":
         vrpIo.writeSolutionToFile(solution, sys.argv[3])
