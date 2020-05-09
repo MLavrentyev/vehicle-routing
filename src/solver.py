@@ -43,40 +43,36 @@ class Solver(ABC):
 class VRPSolver(Solver):
 
     def solve(self, display: bool = False, maximizeObjV: bool = True) -> VRPSolution:
-        doRandJumpProb: float = 0.1
+        annealingTemp: float = 0.97
+        problem = cast(VRPProblem, self.problem)
 
         currState: VRPSolution = self.pickSectoredSolution()
         improveCheck: Callable[[float, float], bool] = (lambda o, c: o > c) if maximizeObjV else (lambda o, c: o < c)
 
         if display:
             vis.init()
-            vis.display(currState)
 
-        done: bool = False
-        while not done:
-            done = True
-
-            # do random jump with some probability
-            if random.random() <= doRandJumpProb:
-                currState = currState.neighbors().__next__()
-                done = False
-            else:
-                # iterative improvement - look for better neighbor (if none, we are done)
-                neighbSolution: VRPSolution
-                for neighbSolution in currState.neighbors():
-                    if improveCheck(neighbSolution.objectiveValue, currState.objectiveValue):
-                        currState = neighbSolution
-                        done = False
-                        break
-                # if the current state is infeasible and we didn't improve this round, randomly pick a neighbor
-                if not currState.isFeasible() and done:
-                    currState = currState.neighbors().__next__()
-                    done = False
-
-            if display and not done:
+        numBadSteps: int = 0
+        numAccSteps: int = 0
+        numSteps: int = 0
+        while not (numBadSteps >= 5 and (numSteps > 0 and numAccSteps/numSteps > 0.02) and currState.isFeasible()):
+            # plot display of current solution
+            if display:
                 vis.display(currState, doPlot=False)
 
-        return currState.greedyRouteReorder()
+            neighb: VRPSolution = currState.randomNeighbor()
+            if (improveCheck(neighb.objectiveValue, currState.objectiveValue)) or\
+               (random.random() <= math.exp((neighb.objectiveValue - currState.objectiveValue) / annealingTemp)):
+                currState = neighb
+                numBadSteps = 0 if improveCheck(neighb.objectiveValue, currState.objectiveValue) else numBadSteps + 1
+                numAccSteps += 1
+
+            numSteps += 1
+            # Anneal temperature every certain number of steps
+            if numSteps % (problem.numCustomers * (problem.numCustomers - 1)) == 0:
+                annealingTemp *= 0.95
+
+        return currState
 
     def pickRandomSolution(self) -> VRPSolution:
         problem = cast(VRPProblem, self.problem)
@@ -156,7 +152,7 @@ def runMultiProcSolver(solverFactory: Callable[[Problem], Solver], problem: Prob
         solverProc.start()
     while True:
         try:
-            solution: Solution = queueConn.get(block=True, timeout=None) #TODO:fix
+            solution: Solution = queueConn.get(block=True, timeout=None) #TODO:fix to set timeout
             break
         except Empty:
             # kill solver and restart
