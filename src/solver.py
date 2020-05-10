@@ -1,11 +1,11 @@
-from typing import cast, List, Callable, Generator, Tuple
+from typing import cast, List, Callable, Generator, Tuple, Type
 from abc import ABC, abstractmethod
-from multiprocessing import Process, Queue, cpu_count
-from queue import Empty
+from multiprocessing import Process, Queue as ProcQueue, cpu_count
+from queue import Empty, Queue
 import sys
 import time
 import random
-import vis
+import platform
 import vrpIo
 import itertools
 import math
@@ -23,7 +23,7 @@ class Solver(ABC):
     def setProblem(self, problem: Problem) -> None:
         self.problem: Problem = problem
 
-    def solveWithQueue(self, queue: Queue, display: bool = False, maximizeObjV: bool = True) -> None:
+    def solveWithQueue(self, queue: ProcQueue, display: bool = False, maximizeObjV: bool = True) -> None:
         solution: Solution = self.solve(display=display, maximizeObjV=maximizeObjV)
         queue.put(solution)
 
@@ -127,6 +127,20 @@ class VRPSolver(Solver):
 
         return VRPSolution(problem, [Route([problem.nodes[i] for i in inds], problem.depot) for inds in indss])
 
+    @staticmethod
+    def printState(currState: VRPSolution) -> None:
+        print(f"{currState.objectiveValue:.2f}\t\t(d: {currState.totalDistance:.2f}, inf: {currState.capacityOverflow:.2f})")
+
+    @staticmethod
+    def addToTabu(tabu: List[VRPSolution], state: VRPSolution, tabuMaxSize: int) -> List[VRPSolution]:
+        if len(tabu) == tabuMaxSize:
+            tabu.pop(0)
+            tabu.append(state)
+        else:
+            tabu.append(state)
+
+        return tabu
+
 
 class VRPSolver2OpSimAnneal(VRPSolver):
 
@@ -177,7 +191,7 @@ class VRPSolver2OpSimAnneal(VRPSolver):
         return VRPSolution2Op(baseSolution.problem, baseSolution.routes)
 
 
-def initSolverProcs(solverFactory: Callable[[Problem], Solver], numSolvers: int, queueConn: Queue,
+def initSolverProcs(solverFactory: Callable[[Problem], Solver], numSolvers: int, queueConn: ProcQueue,
                     factoryArgs: Tuple = (), solveArgs: Tuple = ()) -> Tuple[List[Solver], List[Process]]:
     solvers: List[Solver] = []
     solverProcs: List[Process] = []
@@ -191,7 +205,7 @@ def initSolverProcs(solverFactory: Callable[[Problem], Solver], numSolvers: int,
 
 def runMultiProcSolver(solverFactory: Callable[[Problem], Solver], problem: Problem,
                        solveArgs: Tuple = (), numProcs: int = cpu_count()) -> Tuple[Solution, float]:
-    queueConn: Queue = Queue()
+    queueConn: ProcQueue = ProcQueue()
     startTime: float = time.time()
 
     solvers: List[Solver]
