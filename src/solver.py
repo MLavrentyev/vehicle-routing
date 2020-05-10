@@ -49,8 +49,9 @@ class VRPSolver(Solver):
         improveCheck: Callable[[float, float], bool] = (lambda o, c: o > c) if maximizeObjV else (lambda o, c: o < c)
 
         if display:
-            vis.init()
-            vis.display(currState)
+            if platform.python_implementation() != "PyPy":
+                import vis
+                vis.init()
 
         done: bool = False
         while not done:
@@ -74,10 +75,14 @@ class VRPSolver(Solver):
                     done = False
 
             if display and not done:
-                vis.display(currState, doPlot=False)
+                if platform.python_implementation() != "PyPy":
+                    vis.display(currState, doPlot=False)
+                else:
+                    VRPSolver.printState(currState)
 
         return currState
 
+    #TODO: make these static methods in the Problem class
     def pickRandomSolution(self) -> VRPSolution:
         problem = cast(VRPProblem, self.problem)
 
@@ -152,7 +157,9 @@ class VRPSolver2OpSimAnneal(VRPSolver):
         improveCheck: Callable[[float, float], bool] = (lambda o, c: o > c) if maximizeObjV else (lambda o, c: o < c)
 
         if display:
-            vis.init()
+            if platform.python_implementation() != "PyPy":
+                import vis
+                vis.init()
 
         numBadSteps: int = 0
         numAccSteps: int = 0
@@ -160,11 +167,11 @@ class VRPSolver2OpSimAnneal(VRPSolver):
         while not (numBadSteps >= 10 and (numSteps > 0 and numAccSteps/numSteps < 0.1) and currState.isFeasible()):
 
             neighb: VRPSolution = currState.randomNeighbor()
-            if (improveCheck(neighb.objectiveValue, currState.objectiveValue)) or \
-                    (random.random() <= math.exp((currState.objectiveValue - neighb.objectiveValue) / annealingTemp)):
-                currState = neighb
+            worseProb: float = math.exp(min((currState.objectiveValue - neighb.objectiveValue) / annealingTemp, 1.0))
+            if (improveCheck(neighb.objectiveValue, currState.objectiveValue)) or (random.random() <= worseProb):
                 numBadSteps = 0 if improveCheck(neighb.objectiveValue, currState.objectiveValue) else numBadSteps + 1
                 numAccSteps += 1
+                currState = neighb
 
             numSteps += 1
             # Anneal temperature every certain number of steps
@@ -174,8 +181,12 @@ class VRPSolver2OpSimAnneal(VRPSolver):
 
             # plot display of current solution
             if display:
-                vis.display(currState, doPlot=False)
+                if platform.python_implementation() != "PyPy":
+                    vis.display(currState, doPlot=False)
+                elif numSteps % 10000 == 0:
+                        VRPSolver2OpSimAnneal.printState(currState)
 
+        print(f"Solution found after {numAccSteps:,} accepted steps.")
         return currState
 
     def pickRandomSolution(self) -> VRPSolution2Op:
