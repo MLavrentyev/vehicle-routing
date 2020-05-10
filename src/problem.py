@@ -232,6 +232,8 @@ class VRPSolution(Solution):
         self.problem: VRPProblem = problem
         self.routes: List[Route] = routes
 
+        self._singletonDists: Optional[float] = None
+
     def __str__(self) -> str:
         return ' | '.join('-'.join(stop.name() for stop in route.stops) for route in self.routes)
 
@@ -254,13 +256,14 @@ class VRPSolution(Solution):
 
     @property
     def infeasibilityPenalty(self) -> float:
-        singletonDists: float = 2.0 * sum(self.problem.depot.distance(node) for node in self.problem.nodes)
+        if not self._singletonDists:
+            self._singletonDists = 2.0 * sum(self.problem.depot.distance(node) for node in self.problem.nodes)
 
         multiplier: float
         if self.capacityOverflow >= 0.01 * self.problem.totalDemand:
-            multiplier = 0.1 * singletonDists
+            multiplier = 0.1 * self._singletonDists
         else:
-            multiplier = 0.2 * singletonDists
+            multiplier = 0.2 * self._singletonDists
 
         return multiplier * self.capacityOverflow
 
