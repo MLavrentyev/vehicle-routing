@@ -1,5 +1,5 @@
 import random
-from typing import List, Tuple, Optional, Generator, Callable, TypeVar
+from typing import List, Tuple, Optional, Generator, Callable, TypeVar, cast
 from abc import ABC
 import math
 import copy
@@ -54,7 +54,7 @@ class Node:
         return f"(Node{self.id} <{self.x}, {self.y}>, {self.demand})"
 
     def distance(self, otherNode) -> float:
-        return math.sqrt((self.x - otherNode.x) ** 2 + (self.y - otherNode.y) ** 2)
+        return math.hypot(self.x - otherNode.x, self.y - otherNode.y)
 
     def name(self):
         return f'{self.id:03}'
@@ -87,6 +87,9 @@ class Route:
         # note: stops should never include the depot stop at the start or end
         self.stops: List[Node] = stops
         self.depot: Node = depot
+
+        self._dist: Optional[float] = None
+        self._demand: Optional[int] = None
 
     def __str__(self) -> str:
         nodeIds: List[str] = [str(n) for n in self.stops]
@@ -140,14 +143,15 @@ class Route:
 
     @property
     def distance(self) -> float:
-        dist: float = 0
-        prevNode: Node = self.depot
+        if not self._dist:
+            self._dist: float = 0
+            prevNode: Node = self.depot
 
-        for nextNode in self.stops + [self.depot]:
-            dist += prevNode.distance(nextNode)
-            prevNode = nextNode
+            for nextNode in self.stops + [self.depot]:
+                self._dist += prevNode.distance(nextNode)
+                prevNode = nextNode
 
-        return dist
+        return self._dist
 
     def adjacents(self, i: int) -> Tuple[Node, Node]:
         if i == 0:
@@ -161,7 +165,9 @@ class Route:
 
     @property
     def demand(self) -> int:
-        return sum([stop.demand for stop in self.stops])
+        if not self._demand:
+            self._demand = sum([stop.demand for stop in self.stops])
+        return self._demand
 
     def normalize(self) -> 'Route':
         """Mutate to be equivalent canonical representation"""
