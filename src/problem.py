@@ -101,6 +101,11 @@ class Route:
     def __repr__(self) -> str:
         return f"(Route {str(self.stops)})"
 
+    def __eq__(self, other: object) -> bool:
+        other = cast(Route, other)
+
+        return type(other) == Route and self.depot == other.depot and self.stops == other.stops
+
     def __contains__(self, node: Node) -> bool:
         return node in self.stops
 
@@ -195,6 +200,15 @@ class VRPProblem(Problem):
     def __repr__(self) -> str:
         return f"(Problem <#custs {self.numCustomers}>, <#trucks {self.numTrucks}>, <truckCap {self.truckCapacity}>)"
 
+    def __eq__(self, other: object) -> bool:
+        other = cast(VRPProblem, other)
+
+        return type(other) == VRPProblem and\
+               self.numCustomers == other.numCustomers and\
+               self.numTrucks == other.numTrucks and\
+               self.truckCapacity == other.truckCapacity and\
+               self.depot == other.depot
+
     def addNode(self, node: Node) -> None:
         self.nodes.append(node)
 
@@ -220,6 +234,11 @@ class VRPSolution(Solution):
 
     def __str__(self) -> str:
         return ' | '.join('-'.join(stop.name() for stop in route.stops) for route in self.routes)
+
+    def __eq__(self, other: object) -> bool:
+        other = cast(VRPSolution, other)
+
+        return type(other) == VRPSolution and self.problem == other.problem and self.routes == other.routes
 
     def check(self) -> bool:
         pass
@@ -337,6 +356,16 @@ class VRPSolution(Solution):
         self.routes.sort(key = lambda r: (len(r.stops), r.stops[0].id if r.stops else -1))
 
         return self
+
+    def immutNormalize(self) -> 'VRPSolution':
+        newRoutes: List[Route] = []
+        for route in self.routes:
+            newRoute: Route = copy.deepcopy(route)
+            newRoute.normalize()
+            newRoutes.append(newRoute)
+        newRoutes.sort(key = lambda r: (len(r.stops), r.stops[0].id if r.stops else -1))
+
+        return VRPSolution(self.problem, newRoutes)
 
     def greedyRouteReorder(self) -> 'VRPSolution':
         # greedily reorder routes in place without swapping nodes between routes
