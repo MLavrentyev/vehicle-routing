@@ -437,7 +437,7 @@ class VRPSolution2Op(VRPSolution):
         idx1: int = random.randrange(len(routes))      # not weighted
         idx2: int = random.randrange(len(routes))      # not weighted
         dobj: float     # difference in objective
-        dpen: float     # differnece in penalty
+        dpen: int       # differnece in penalty
         if idx1 == idx2:
             route: Route = routes[idx1]
             cut1 = random.randrange(len(route.stops)+1)
@@ -447,7 +447,9 @@ class VRPSolution2Op(VRPSolution):
             new = Route(L+M[::1]+R, self.depot)
             dobj = new.distance - route.distance
             dpen = new.isFeasible(self.problem.truckCapacity) - route.isFeasible(self.problem.truckCapacity)
-            if pred(dobj, dpen): routes[idx1] = new
+            if pred(dobj, dpen):
+                routes[idx1] = new
+                self.dirty()
         else:
             if idx1 > idx2: idx1, idx2 = idx2, idx1
             route1: Route = routes[idx1]
@@ -470,7 +472,12 @@ class VRPSolution2Op(VRPSolution):
             if pred(dobj, dpen):
                 routes[idx1] = new1
                 routes[idx2] = new2
+                self.dirty()
 
+    def dirty(self):
+        """Call when self is mutated to clear memoized fields"""
+        # FIXME: I'm probably missing something. Is objective/penalty memoized?
+        self._singletonDists = None
 
     @staticmethod
     def swapEdges(fullRoute: List[Node], edge1Idx: int, edge2Idx: int) -> List[Node]:
