@@ -45,7 +45,9 @@ class VRPSolver(Solver):
     def solve(self, display: bool = False, maximizeObjV: bool = True) -> VRPSolution:
         doRandJumpProb: float = 0.1
 
-        currState: VRPSolution = self.pickSectoredSolution()
+        currState: VRPSolution = self.pickRandomSolution()
+        # currState = VRPSolution2Op(currState.problem, currState.routes)
+
         improveCheck: Callable[[float, float], bool] = (lambda o, c: o > c) if maximizeObjV else (lambda o, c: o < c)
 
         if display:
@@ -54,12 +56,13 @@ class VRPSolver(Solver):
                 vis.init()
 
         done: bool = False
+        numSteps: int = 1
         while not done:
             done = True
 
             # do random jump with some probability
             if random.random() <= doRandJumpProb:
-                currState = currState.neighbors().__next__()
+                currState = currState.randomNeighbor()
                 done = False
             else:
                 # iterative improvement - look for better neighbor (if none, we are done)
@@ -71,14 +74,16 @@ class VRPSolver(Solver):
                         break
                 # if the current state is infeasible and we didn't improve this round, randomly pick a neighbor
                 if not currState.isFeasible() and done:
-                    currState = currState.neighbors().__next__()
+                    currState = currState.randomNeighbor()
                     done = False
+            numSteps += 1
 
-            if display and not done:
-                if platform.python_implementation() != "PyPy":
-                    vis.display(currState, doPlot=False)
-                else:
-                    VRPSolver.printState(currState)
+            if display:
+                if numSteps % 10000 == 0:
+                    if platform.python_implementation() != "PyPy":
+                        vis.display(currState, doPlot=False)
+                    else:
+                        VRPSolver2OpSimAnneal.printState(numSteps, currState)
 
         return currState
 
@@ -133,8 +138,10 @@ class VRPSolver(Solver):
         return VRPSolution(problem, [Route([problem.nodes[i] for i in inds], problem.depot) for inds in indss])
 
     @staticmethod
-    def printState(currState: VRPSolution) -> None:
-        print(f"{currState.objectiveValue:.2f}\t\t(d: {currState.totalDistance:.2f}, inf: {currState.capacityOverflow:.2f})")
+    def printState(step: int, currState: VRPSolution) -> None:
+        print(f"Step: {step:,} ".ljust(25) +
+              f"Score: {currState.objectiveValue:.2f} ".ljust(25) +
+              f"(d: {currState.totalDistance:.2f}, inf: {currState.capacityOverflow:.2f})")
 
     @staticmethod
     def addToTabu(tabu: List[VRPSolution], state: VRPSolution, tabuMaxSize: int) -> List[VRPSolution]:
@@ -150,8 +157,11 @@ class VRPSolver(Solver):
 class VRPSolver2OpSimAnneal(VRPSolver):
 
     def solve(self, display: bool = False, maximizeObjV: bool = True) -> VRPSolution:
-        annealingTemp: float = 5000
         problem = cast(VRPProblem, self.problem)
+
+        annealingTemp: float = 1  # higher values promote more wandering at the beginning
+        annealingSched: float = 0.65  # lower values go more directly to the minimum. higher values wander more
+        annealingTime: int = (problem.numCustomers * (problem.numCustomers - 1)) // 2
 
         currState: VRPSolution = self.pickRandomSolution()
         improveCheck: Callable[[float, float], bool] = (lambda o, c: o > c) if maximizeObjV else (lambda o, c: o < c)
@@ -161,32 +171,47 @@ class VRPSolver2OpSimAnneal(VRPSolver):
                 import vis
                 vis.init()
 
+        scoreHistory: List[float] = []
+        historySize: int = 1000  # speed vs. quality tradeoff (higher value is slower but better solution)
         numBadSteps: int = 0
         numAccSteps: int = 0
-        numSteps: int = 0
-        while not (numBadSteps >= 10 and (numSteps > 0 and numAccSteps/numSteps < 0.1) and currState.isFeasible()):
+        numSteps: int = 1
+        #  and numAccSteps/numSteps < 0.25
+        while not (numBadSteps >= 5 and currState.isFeasible() and (max(scoreHistory) - min(scoreHistory) < 0.001 * max(scoreHistory))):
 
             neighb: VRPSolution = currState.randomNeighbor()
             worseProb: float = math.exp(min((currState.objectiveValue - neighb.objectiveValue) / annealingTemp, 1.0))
+            # Pick neighbor and decide whether to move there
             if (improveCheck(neighb.objectiveValue, currState.objectiveValue)) or (random.random() <= worseProb):
                 numBadSteps = 0 if improveCheck(neighb.objectiveValue, currState.objectiveValue) else numBadSteps + 1
                 numAccSteps += 1
                 currState = neighb
 
+                # adjust score history with new step
+                scoreHistory.append(currState.objectiveValue)
+                if len(scoreHistory) > historySize:
+                    scoreHistory.pop(0)
+
             numSteps += 1
             # Anneal temperature every certain number of steps
-            if numSteps % (problem.numCustomers * (problem.numCustomers - 1)) == 0:
-                print(f"Annealing from {annealingTemp:.3f}. Acceptance percentage: {numAccSteps/numSteps:.2f}.")
-                annealingTemp *= 0.85
+            if numSteps % annealingTime == 0:
+                annealingTemp *= annealingSched
+                print(f"Annealing temperature. Acceptance rate: {numAccSteps/numSteps:.2f}")
+
+            # Check whether it's stuck in an infeasible minimum and jump out
+            if (not currState.isFeasible()) and len(scoreHistory) == historySize and (max(scoreHistory) - min(scoreHistory) < 0.0001 * max(scoreHistory)):
+                currState = self.pickRandomSolution()
+                print("Randomizing to new solution.")
 
             # plot display of current solution
             if display:
-                if platform.python_implementation() != "PyPy":
-                    vis.display(currState, doPlot=False)
-                elif numSteps % 10000 == 0:
-                        VRPSolver2OpSimAnneal.printState(currState)
+                if numSteps % 1e4 == 0:
+                    if platform.python_implementation() != "PyPy":
+                        vis.display(currState, doPlot=False)
+                    else:
+                        VRPSolver2OpSimAnneal.printState(numSteps, currState)
 
-        print(f"Solution found after {numAccSteps:,} accepted steps.")
+        print(f"Solution found after {numAccSteps:,} accepted steps. Score: {currState.objectiveValue:.2f}")
         return currState
 
     def pickRandomSolution(self) -> VRPSolution2Op:
@@ -253,17 +278,17 @@ def runMultiProcSolver(solverFactory: Callable[[Problem], Solver], problem: Prob
 
 if __name__ == "__main__":
     problem: VRPProblem = vrpIo.readInput(sys.argv[1])
-    solverType: type = VRPSolver2OpSimAnneal
+    solverType: Type[Solver] = VRPSolver2OpSimAnneal
 
     solution: VRPSolution
     solveTime: float
     solution, solveTime = cast(Tuple[VRPSolution, float],
-                               runMultiProcSolver(solverType.factory, problem, solveArgs=(True, False), numProcs=3))
+                               runMultiProcSolver(solverType.factory, problem, solveArgs=(True, False), numProcs=1))
+    # solution, solveTime = cast(VRPSolution, solverType.factory(problem).solve(True, False)), 0 # only for profiling
 
     if len(sys.argv) == 4 and sys.argv[2] == "-f":
         vrpIo.writeSolutionToFile(solution, sys.argv[3])
-    elif len(sys.argv) == 2:
-        vrpIo.printSolution(solution, solveTime)
-    else:
+    elif not len(sys.argv) == 2:
         raise IOError("Incorrect arguments passed.")
 
+    vrpIo.printSolution(solution, solveTime)
