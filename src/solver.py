@@ -173,6 +173,8 @@ class VRPSolver2OpSimAnneal(VRPSolver):
                 numAccSteps += 1
                 currState = neighb
 
+            # currState.becomeNeighbor(lambda dobj, dpen: False)
+
             numSteps += 1
             # Anneal temperature every certain number of steps
             if numSteps % (problem.numCustomers * (problem.numCustomers - 1)) == 0:
