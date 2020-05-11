@@ -11,20 +11,21 @@ then
 fi
 
 input=$1
+output="output/$(basename -- "$input").sol"
 
 #java -cp src solver.ls.Main $input
 
 if hash pypy3 2>/dev/null; then
-  echo "using pypy3"
+  #echo "using pypy3"
   if [[ "$OSTYPE" == "msys" ]]; then
-    winpty pypy3 src/solver.py "$input"
+    winpty pypy3 -W ignore src/solver.py "$input" -f "$output"
   else
-    pypy3 src/solver.py "$input"
+    pypy3 -W ignore src/solver.py "$input" -f "$output"
   fi
 elif hash pypy3.6-v7.1.1 2>/dev/null; then
-  echo "using pypy3.6-v7.1.1"
-  pypy3.6-v7.1.1 src/solver.py "$input"
+  #echo "using pypy3.6-v7.1.1"
+  pypy3.6-v7.1.1 -W ignore src/solver.py "$input" -f "$output"
 else
-  echo "using python"
-  python src/solver.py "$input"
+  #echo "using python"
+  python -W ignore src/solver.py "$input" -f "$output"
 fi

@@ -1,5 +1,6 @@
 from typing import List
 import math
+import os
 from problem import VRPProblem, Node, Route, VRPSolution
 
 
@@ -45,7 +46,7 @@ def writeSolutionToFile(solution: VRPSolution, file: str) -> None:
 def printSolution(solution: VRPSolution, solveTime: float) -> None:
     lines: List[str] = formatSolution(solution)
 
-    print(f"Instance: {solution.problem.file}"
+    print(f"Instance: {os.path.basename(solution.problem.file)}"
           f" Time: {solveTime:.2f}"
           f" Result: {solution.totalDistance:.2f}"
           f" Solution {int(solution.isOptimal)} {' '.join(lines[1:])}")

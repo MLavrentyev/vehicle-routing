@@ -196,12 +196,14 @@ class VRPSolver2OpSimAnneal(VRPSolver):
             # Anneal temperature every certain number of steps
             if numSteps % annealingTime == 0:
                 annealingTemp *= annealingSched
-                print(f"Annealing temperature. Acceptance rate: {numAccSteps/numSteps:.2f}")
+                if display:
+                    print(f"Annealing temperature. Acceptance rate: {numAccSteps/numSteps:.2f}")
 
             # Check whether it's stuck in an infeasible minimum and jump out
             if (not currState.isFeasible()) and len(scoreHistory) == historySize and (max(scoreHistory) - min(scoreHistory) < 0.0001 * max(scoreHistory)):
                 currState = self.pickRandomSolution()
-                print("Randomizing to new solution.")
+                if display:
+                    print("Randomizing to new solution.")
 
             # plot display of current solution
             if display:
@@ -283,7 +285,7 @@ if __name__ == "__main__":
     solution: VRPSolution
     solveTime: float
     solution, solveTime = cast(Tuple[VRPSolution, float],
-                               runMultiProcSolver(solverType.factory, problem, solveArgs=(False, False), numProcs=3))
+                               runMultiProcSolver(solverType.factory, problem, solveArgs=(False, False), numProcs=7))
     # solution, solveTime = cast(VRPSolution, solverType.factory(problem).solve(True, False)), 0 # only for profiling
 
     if len(sys.argv) == 4 and sys.argv[2] == "-f":
