@@ -9,7 +9,8 @@ import platform
 import vrpIo
 import itertools
 import math
-from problem import Route, Node, Problem, VRPProblem, Solution, VRPSolution, getClosestNode, VRPSolution2Op2
+from problem import Route, Node, Problem, VRPProblem, Solution, VRPSolution, getClosestNode
+from vrpsolutionmulti import VRPSolutionMulti
 
 
 class Solver(ABC):
@@ -46,7 +47,7 @@ class VRPSolver(Solver):
         doRandJumpProb: float = 0.1
 
         currState: VRPSolution = self.pickRandomSolution()
-        # currState = VRPSolution2Op2(currState.problem, currState.routes)
+        # currState = VRPSolutionMulti(currState.problem, currState.routes)
 
         improveCheck: Callable[[float, float], bool] = (lambda o, c: o > c) if maximizeObjV else (lambda o, c: o < c)
 
@@ -218,17 +219,17 @@ class VRPSolver2OpSimAnneal(VRPSolver):
         print(f"Solution found after {numAccSteps:,} accepted steps. Score: {currState.objectiveValue:.2f}")
         return currState
 
-    def pickRandomSolution(self) -> VRPSolution2Op2:
+    def pickRandomSolution(self) -> VRPSolutionMulti:
         baseSolution: VRPSolution = super().pickRandomSolution()
-        return VRPSolution2Op2(baseSolution.problem, baseSolution.routes)
+        return VRPSolutionMulti(baseSolution.problem, baseSolution.routes)
 
-    def pickSectoredSolution(self) -> VRPSolution2Op2:
+    def pickSectoredSolution(self) -> VRPSolutionMulti:
         baseSolution: VRPSolution = super().pickSectoredSolution()
-        return VRPSolution2Op2(baseSolution.problem, baseSolution.routes)
+        return VRPSolutionMulti(baseSolution.problem, baseSolution.routes)
 
-    def pickAnySolution(self) -> VRPSolution2Op2:
+    def pickAnySolution(self) -> VRPSolutionMulti:
         baseSolution: VRPSolution = super().pickAnySolution()
-        return VRPSolution2Op2(baseSolution.problem, baseSolution.routes)
+        return VRPSolutionMulti(baseSolution.problem, baseSolution.routes)
 
 
 def initSolverProcs(solverFactory: Callable[[Problem], Solver], numSolvers: int, queueConn: ProcQueue,
