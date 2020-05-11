@@ -395,15 +395,41 @@ class VRPSolution2Op(VRPSolution):
                                      self.parseRoutes(VRPSolution2Op.swapEdges(fullRoute, edge1Idx, edge2Idx)))
 
     def randomNeighbor(self) -> 'VRPSolution2Op':
-        fullRoute: List[Node] = self.getFullRoute()
 
-        # pick two distinct edge ending points
-        edgeEnds: List[int] = random.sample(range(1, len(self.getFullRoute())), 2)
-        edge1Idx: int = min(edgeEnds)
-        edge2Idx: int = max(edgeEnds)
+        # TODO: mutate this solution in place to avoid operations on self.routes
+        # TODO: keep track of dist/demand on either side of nodes to avoid bad cuts
 
-        fullRoute = VRPSolution2Op.swapEdges(fullRoute, edge1Idx, edge2Idx)
-        return VRPSolution2Op(self.problem, self.parseRoutes(fullRoute))
+        routes = self.routes
+        idx1: int = random.randrange(len(routes))      # not weighted
+        idx2: int = random.randrange(len(routes))      # not weighted
+        cut1: int
+        cut2: int
+        if idx1 == idx2:
+            route: Route = routes[idx1]
+            cut1 = random.randrange(len(route.stops)+1)
+            cut2 = random.randrange(len(route.stops)+1)
+            if cut1 > cut2: cut1, cut2 = cut2, cut1
+            L, M, R = route.stops[:cut1], route.stops[cut1:cut2], route.stops[cut2:]
+            new = Route(L+M[::1]+R, self.depot)
+            return VRPSolution2Op(self.problem, routes[:idx1]+[new]+routes[idx1+1:])
+        else:
+            if idx1 > idx2: idx1, idx2 = idx2, idx1
+            route1: Route = routes[idx1]
+            route2: Route = routes[idx2]
+            cut1 = random.randrange(len(route1.stops)+1)
+            cut2 = random.randrange(len(route2.stops)+1)
+            L1, R1 = route1.stops[:cut1], route1.stops[cut1:]
+            L2, R2 = route2.stops[:cut2], route2.stops[cut2:]
+            new1: Route
+            new2: Route
+            if random.randrange(2):
+                new1 = Route(L1+R2, self.depot)
+                new2 = Route(L2+R1, self.depot)
+            else:
+                new1 = Route(L1+L2[::-1], self.depot)
+                new2 = Route(R1+R2[::-1], self.depot)
+            return VRPSolution2Op(self.problem, routes[:idx1]+[new1]+routes[idx1+1:idx2]+[new2]+routes[idx2+1:])
+
 
     @staticmethod
     def swapEdges(fullRoute: List[Node], edge1Idx: int, edge2Idx: int) -> List[Node]:
