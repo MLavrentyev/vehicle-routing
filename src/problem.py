@@ -149,7 +149,7 @@ class Route:
     @property
     def distance(self) -> float:
         if not self._dist:
-            self._dist: float = 0
+            self._dist = 0
             prevNode: Node = self.depot
 
             for nextNode in self.stops + [self.depot]:
@@ -196,6 +196,8 @@ class VRPProblem(Problem):
         self.nodes: List[Node] = []
 
         self._greedyDist: Optional[float] = None
+        self._singletonDist: Optional[float] = None
+        self._totalDemand: Optional[int] = None
 
     def __repr__(self) -> str:
         return f"(Problem <#custs {self.numCustomers}>, <#trucks {self.numTrucks}>, <truckCap {self.truckCapacity}>)"
@@ -214,7 +216,9 @@ class VRPProblem(Problem):
 
     @property
     def totalDemand(self) -> int:
-        return sum(node.demand for  node in self.nodes)
+        if not self._totalDemand:
+            self._totalDemand = sum(node.demand for node in self.nodes)
+        return self._totalDemand
 
     @property
     def greedyDistance(self) -> float:
@@ -224,6 +228,13 @@ class VRPProblem(Problem):
             self._greedyDist = route.distance
         return self._greedyDist
 
+    @property
+    def singletonDistance(self) -> float:
+        if not self._singletonDist:
+            self._singletonDist = 2.0 * sum(self.depot.distance(node) for node in self.nodes)
+
+        return self._singletonDist
+
 
 class VRPSolution(Solution):
     def __init__(self, problem: VRPProblem, routes: List[Route]):
@@ -231,8 +242,6 @@ class VRPSolution(Solution):
 
         self.problem: VRPProblem = problem
         self.routes: List[Route] = routes
-
-        self._singletonDists: Optional[float] = None
 
     def __str__(self) -> str:
         return ' | '.join('-'.join(stop.name() for stop in route.stops) for route in self.routes)
@@ -256,14 +265,11 @@ class VRPSolution(Solution):
 
     @property
     def infeasibilityPenalty(self) -> float:
-        if not self._singletonDists:
-            self._singletonDists = 2.0 * sum(self.problem.depot.distance(node) for node in self.problem.nodes)
-
         multiplier: float
         if self.capacityOverflow >= 0.01 * self.problem.totalDemand:
-            multiplier = 0.1 * self._singletonDists
+            multiplier = 100 * self.problem.singletonDistance
         else:
-            multiplier = 0.2 * self._singletonDists
+            multiplier = 50 * self.problem.singletonDistance
 
         return multiplier * self.capacityOverflow
 
