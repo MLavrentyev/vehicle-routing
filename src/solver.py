@@ -192,6 +192,8 @@ class VRPSolver2OpSimAnneal(VRPSolver):
                 if len(scoreHistory) > historySize:
                     scoreHistory.pop(0)
 
+            # currState.becomeNeighbor(lambda dobj, dpen: False)
+
             numSteps += 1
             # Anneal temperature every certain number of steps
             if numSteps % annealingTime == 0:
