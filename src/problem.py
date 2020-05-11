@@ -29,7 +29,7 @@ class Solution(ABC):
     def normalize(self): # -> Solution
         return self
 
-    def becomeNeighbor(self, pred: Callable[[float, float], bool]) -> None:
+    def becomeNeighbor(self, pred: Callable[[float, int], bool]) -> None:
         pass
 
 
@@ -432,7 +432,7 @@ class VRPSolution2Op(VRPSolution):
             return VRPSolution2Op(self.problem, routes[:idx1]+[new1]+routes[idx1+1:idx2]+[new2]+routes[idx2+1:])
 
     # noinspection DuplicatedCode
-    def becomeNeighbor(self, pred: Callable[[float, float], bool]) -> None:
+    def becomeNeighbor(self, pred: Callable[[float, int], bool]) -> None:
         routes = self.routes
         idx1: int = random.randrange(len(routes))      # not weighted
         idx2: int = random.randrange(len(routes))      # not weighted
