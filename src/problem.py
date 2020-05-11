@@ -29,6 +29,15 @@ class Solution(ABC):
     def normalize(self): # -> Solution
         return self
 
+    def randomNeighbor(self) -> 'Solution':
+        pass
+
+    def becomeNeighbor(self, probWorse: float) -> None:
+        pass
+
+    @staticmethod
+    def rand(problem: 'Problem') -> 'Solution':
+        pass
 
 class Problem(ABC):
     pass
