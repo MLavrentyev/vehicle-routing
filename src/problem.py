@@ -405,6 +405,47 @@ class VRPSolution2Op(VRPSolution):
 
     # noinspection DuplicatedCode
     def randomNeighbor(self) -> 'VRPSolution2Op':
+        fullRoute: List[Node] = self.getFullRoute()
+        # pick two distinct edge ending points
+        edgeEnds: List[int] = random.sample(range(1, len(self.getFullRoute())), 2)
+        edge1Idx: int = min(edgeEnds)
+        edge2Idx: int = max(edgeEnds)
+        fullRoute = VRPSolution2Op.swapEdges(fullRoute, edge1Idx, edge2Idx)
+        return VRPSolution2Op(self.problem, self.parseRoutes(fullRoute))
+
+    def dirty(self):
+        """Call when self is mutated to clear memoized fields"""
+        # FIXME: I'm probably missing something. Is objective/penalty memoized?
+        self._singletonDists = None
+
+    @staticmethod
+    def swapEdges(fullRoute: List[Node], edge1Idx: int, edge2Idx: int) -> List[Node]:
+        seg1: List[Node] = fullRoute[:edge1Idx]
+        seg2: List[Node] = fullRoute[edge1Idx:edge2Idx]
+        seg3: List[Node] = fullRoute[edge2Idx:]
+
+        seg2.reverse()
+
+        return seg1 + seg2 + seg3
+
+    def parseRoutes(self, fullRoute: List[Node]) -> List[Route]:
+        routes: List[Route] = []
+        # TODO: debugging asserts for now
+        assert fullRoute[-1] == self.problem.depot
+
+        prevRouteEndIdx: int = -1
+        for routeEndIdx in find(self.problem.depot, fullRoute):
+            routes.append(Route(fullRoute[prevRouteEndIdx + 1:routeEndIdx], self.problem.depot))
+            prevRouteEndIdx = routeEndIdx
+
+        assert len(routes) == self.problem.numTrucks
+        return routes
+
+
+class VRPSolution2Op2(VRPSolution2Op):
+
+    # noinspection DuplicatedCode
+    def randomNeighbor(self) -> 'VRPSolution2Op':
 
         # TODO: keep track of dist/demand on either side of nodes to avoid bad cuts
 
@@ -479,33 +520,3 @@ class VRPSolution2Op(VRPSolution):
                 routes[idx1] = new1
                 routes[idx2] = new2
                 self.dirty()
-
-    def dirty(self):
-        """Call when self is mutated to clear memoized fields"""
-        # FIXME: I'm probably missing something. Is objective/penalty memoized?
-        self._singletonDists = None
-
-    @staticmethod
-    def swapEdges(fullRoute: List[Node], edge1Idx: int, edge2Idx: int) -> List[Node]:
-        seg1: List[Node] = fullRoute[:edge1Idx]
-        seg2: List[Node] = fullRoute[edge1Idx:edge2Idx]
-        seg3: List[Node] = fullRoute[edge2Idx:]
-
-        seg2.reverse()
-
-        return seg1 + seg2 + seg3
-
-    def parseRoutes(self, fullRoute: List[Node]) -> List[Route]:
-        routes: List[Route] = []
-        # TODO: debugging asserts for now
-        assert fullRoute[-1] == self.problem.depot
-
-        prevRouteEndIdx: int = -1
-        for routeEndIdx in find(self.problem.depot, fullRoute):
-            routes.append(Route(fullRoute[prevRouteEndIdx + 1:routeEndIdx], self.problem.depot))
-            prevRouteEndIdx = routeEndIdx
-
-        assert len(routes) == self.problem.numTrucks
-        return routes
-
-

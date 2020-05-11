@@ -46,7 +46,7 @@ def plot(sol: VRPSolution, time = None):
         ys = [stop.y for stop in stops]
         plt.plot(xs, ys)
 
-        ss = [stop.demand * 10 for stop in stops]
+        ss = [stop.demand * 6 for stop in stops]
         plt.scatter(xs, ys, ss)
         plt.title(f"Feasible: {sol.isFeasible()} | Score: {sol.objectiveValue:.2f}")
 

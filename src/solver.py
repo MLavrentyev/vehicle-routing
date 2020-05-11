@@ -9,7 +9,7 @@ import platform
 import vrpIo
 import itertools
 import math
-from problem import Route, Node, Problem, VRPProblem, Solution, VRPSolution, getClosestNode, VRPSolution2Op
+from problem import Route, Node, Problem, VRPProblem, Solution, VRPSolution, getClosestNode, VRPSolution2Op2
 
 
 class Solver(ABC):
@@ -46,7 +46,7 @@ class VRPSolver(Solver):
         doRandJumpProb: float = 0.1
 
         currState: VRPSolution = self.pickRandomSolution()
-        # currState = VRPSolution2Op(currState.problem, currState.routes)
+        # currState = VRPSolution2Op2(currState.problem, currState.routes)
 
         improveCheck: Callable[[float, float], bool] = (lambda o, c: o > c) if maximizeObjV else (lambda o, c: o < c)
 
@@ -218,17 +218,17 @@ class VRPSolver2OpSimAnneal(VRPSolver):
         print(f"Solution found after {numAccSteps:,} accepted steps. Score: {currState.objectiveValue:.2f}")
         return currState
 
-    def pickRandomSolution(self) -> VRPSolution2Op:
+    def pickRandomSolution(self) -> VRPSolution2Op2:
         baseSolution: VRPSolution = super().pickRandomSolution()
-        return VRPSolution2Op(baseSolution.problem, baseSolution.routes)
+        return VRPSolution2Op2(baseSolution.problem, baseSolution.routes)
 
-    def pickSectoredSolution(self) -> VRPSolution2Op:
+    def pickSectoredSolution(self) -> VRPSolution2Op2:
         baseSolution: VRPSolution = super().pickSectoredSolution()
-        return VRPSolution2Op(baseSolution.problem, baseSolution.routes)
+        return VRPSolution2Op2(baseSolution.problem, baseSolution.routes)
 
-    def pickAnySolution(self) -> VRPSolution2Op:
+    def pickAnySolution(self) -> VRPSolution2Op2:
         baseSolution: VRPSolution = super().pickAnySolution()
-        return VRPSolution2Op(baseSolution.problem, baseSolution.routes)
+        return VRPSolution2Op2(baseSolution.problem, baseSolution.routes)
 
 
 def initSolverProcs(solverFactory: Callable[[Problem], Solver], numSolvers: int, queueConn: ProcQueue,
