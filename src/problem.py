@@ -93,6 +93,7 @@ class Route:
 
         self._dist: Optional[float] = None
         self._demand: Optional[int] = None
+        self._capOverflow: Optional[int] = None
 
     def __str__(self) -> str:
         nodeIds: List[str] = [str(n) for n in self.stops]
@@ -160,6 +161,13 @@ class Route:
                 prevNode = nextNode
 
         return self._dist
+
+    def capacityOverflow(self, truckCap: int) -> int:
+        if not self._capOverflow:
+            demandSupplyDiff = self.demand - truckCap
+            self._capOverflow = demandSupplyDiff if demandSupplyDiff > 0 else 0
+
+        return self._capOverflow
 
     def adjacents(self, i: int) -> Tuple[Node, Node]:
         if i == 0:
@@ -245,6 +253,8 @@ class VRPSolution(Solution):
 
         self.problem: VRPProblem = problem
         self.routes: List[Route] = routes
+
+        self._capOverflow: Optional[int] = None
 
     def __str__(self) -> str:
         return ' | '.join('-'.join(stop.name() for stop in route.stops) for route in self.routes)
@@ -334,13 +344,11 @@ class VRPSolution(Solution):
     #     return total
 
     @property
-    def capacityOverflow(self) -> float:
-        capOverflow: float = 0
-        for rte in self.routes:
-            demandSupplyDiff = rte.demand - self.problem.truckCapacity
-            capOverflow += demandSupplyDiff if demandSupplyDiff > 0 else 0
+    def capacityOverflow(self) -> int:
+        if not self._capOverflow:
+            self._capOverflow = sum(route.capacityOverflow(self.problem.truckCapacity) for route in self.routes)
 
-        return capOverflow
+        return self._capOverflow
 
     def isFeasible(self) -> bool:
         return (self.capacityOverflow == 0)
