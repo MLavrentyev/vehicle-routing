@@ -283,7 +283,7 @@ if __name__ == "__main__":
     solution: VRPSolution
     solveTime: float
     solution, solveTime = cast(Tuple[VRPSolution, float],
-                               runMultiProcSolver(solverType.factory, problem, solveArgs=(True, False), numProcs=1))
+                               runMultiProcSolver(solverType.factory, problem, solveArgs=(False, False), numProcs=3))
     # solution, solveTime = cast(VRPSolution, solverType.factory(problem).solve(True, False)), 0 # only for profiling
 
     if len(sys.argv) == 4 and sys.argv[2] == "-f":
