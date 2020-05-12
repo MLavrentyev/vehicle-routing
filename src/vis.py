@@ -26,6 +26,7 @@ def display(sol: VRPSolution, doPlot: bool = False, showSol: bool = False):
 
 def plot(sol: VRPSolution, time = None):
     if G['os'] and sol.objectiveValue >= G['os'][-1]: return
+    sol.normalize()
     time = time if time is not None else datetime.now().timestamp()
     dt = time - G['start']
     G['ts'].append(dt)
