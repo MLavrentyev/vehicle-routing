@@ -1,9 +1,10 @@
 import random
 
-from typing import List
+from typing import List, Optional, Tuple
 
 from problem import VRPSolution2Op, Node, Route
 
+OPT2, TAKE, SWAP = range(3)
 
 class VRPSolutionMulti(VRPSolution2Op):
     """Neighbor function does some operations which are pairs of 2-opts"""
@@ -13,14 +14,25 @@ class VRPSolutionMulti(VRPSolution2Op):
         # TODO: keep track of dist/demand on either side of nodes to avoid bad edges
 
         r = random.randrange(3)
-        if r == 0:   return self.rand2Opt()   # most change / early
+        if   r == 0: return self.rand2Opt()   # most change / early
         elif r == 1: return self.randTake()   # middle
         else:        return self.randSwap()   # least change / late
+
+    def randomNeighborW(self, d: List[float]) -> Tuple[int, 'VRPSolutionMulti']:
+        total = sum(d)
+
+        # print(f"{d[0]:.4f}\t{d[1]:.4f}\t{d[2]:.4f}")
+
+        r = random.random()*total
+        if   r < d[0]:      return (OPT2, self.rand2Opt())   # most change / early
+        elif r < d[0]+d[1]: return (TAKE, self.randTake())   # middle
+        else:               return (SWAP, self.randSwap())   # least change / late
+
 
     # noinspection DuplicatedCode
     def randSwap(self) -> 'VRPSolutionMulti':
         """AXB+CYD <~> AYB+CXD"""
-        # print("randSwap")
+        # print(" "*(8*SWAP)+"randSwap")
         routes = self.routes
         idx1: int = random.randrange(len(routes))      # not weighted
         idx2: int = random.randrange(len(routes))      # not weighted
@@ -49,7 +61,7 @@ class VRPSolutionMulti(VRPSolution2Op):
     # noinspection DuplicatedCode
     def randTake(self) -> 'VRPSolutionMulti':
         """AXB+CD <~> AB+CXD"""
-        # print("randTake")
+        # print(" "*(8*TAKE)+"randTake")
         # this one's a bit trickier than swap/2opt because of the extra asymmetry
         routes = self.routes
         idx1: int = random.randrange(len(routes))      # not weighted
@@ -87,7 +99,7 @@ class VRPSolutionMulti(VRPSolution2Op):
     # noinspection DuplicatedCode
     def rand2Opt(self) -> 'VRPSolutionMulti':
         """AB+CD <~> AC+BD <~> AD+BC"""
-        # print("rand2Opt")
+        # print(" "*(8*OPT2)+"rand2Opt")
         routes = self.routes
         idx1: int = random.randrange(len(routes))      # not weighted
         idx2: int = random.randrange(len(routes))      # not weighted
