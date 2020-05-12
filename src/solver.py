@@ -164,7 +164,7 @@ class VRPSolver2OpSimAnneal(VRPSolver):
         annealingSched: float = 0.65  # lower values go more directly to the minimum. higher values wander more
         annealingTime: int = (problem.numCustomers * (problem.numCustomers - 1)) // 2
 
-        currState: VRPSolution = self.pickRandomSolution()
+        currState: VRPSolutionMulti = self.pickRandomSolution()
         improveCheck: Callable[[float, float], bool] = (lambda o, c: o > c) if maximizeObjV else (lambda o, c: o < c)
 
         if display:
@@ -177,14 +177,25 @@ class VRPSolver2OpSimAnneal(VRPSolver):
         numBadSteps: int = 0
         numAccSteps: int = 0
         numSteps: int = 1
+
+        distrib = [1.0, 1.0, 1.0]   # OPT2, TAKE, SWAP
+        learn: float = 0.001        # TODO: tune
+        minW: float = 0.0000        # TODO: tune
+
         #  and numAccSteps/numSteps < 0.25
         while not (numBadSteps >= 5 and currState.isFeasible() and (max(scoreHistory) - min(scoreHistory) < 0.001 * max(scoreHistory))):
 
-            neighb: VRPSolution = currState.randomNeighbor()
+            op: int
+            neighb: VRPSolutionMulti
+            (op, neighb) = currState.randomNeighborW(distrib)
+            improved: bool = improveCheck(neighb.objectiveValue, currState.objectiveValue)
+            target = 1 if improved else minW
+            distrib[op] = learn*target + (1-learn)*distrib[op]
+
             worseProb: float = math.exp(min((currState.objectiveValue - neighb.objectiveValue) / annealingTemp, 1.0))
             # Pick neighbor and decide whether to move there
-            if (improveCheck(neighb.objectiveValue, currState.objectiveValue)) or (random.random() <= worseProb):
-                numBadSteps = 0 if improveCheck(neighb.objectiveValue, currState.objectiveValue) else numBadSteps + 1
+            if improved or (random.random() <= worseProb):
+                numBadSteps = 0 if improved else numBadSteps + 1
                 numAccSteps += 1
                 currState = neighb
 
