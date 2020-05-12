@@ -291,12 +291,6 @@ def runMultiProcSolver(solverFactory: Callable[[Problem], Solver], problem: Prob
 
     return solution, (time.time() - startTime)
 
-def verify(sol: VRPSolution) -> None:
-    assert sol.infeasibilityPenalty == 0
-    nodes = [n.id for n in sol.getFullRoute() if n.id]
-    # print(f"nodes: {nodes}")
-    assert(len(nodes) == len(set(nodes)))
-
 if __name__ == "__main__":
     problem: VRPProblem = vrpIo.readInput(sys.argv[1])
     solverType: Type[Solver] = VRPSolver2OpSimAnneal
@@ -307,7 +301,8 @@ if __name__ == "__main__":
                                runMultiProcSolver(solverType.factory, problem, solveArgs=(False, False), numProcs=7))
     # solution, solveTime = cast(VRPSolution, solverType.factory(problem).solve(True, False)), 0 # only for profiling
 
-    # verify(solution)    # for testing
+    assert solution.capacityOverflow == 0
+    assert solution.verify()    # for testing
 
     if len(sys.argv) == 4 and sys.argv[2] == "-f":
         vrpIo.writeSolutionToFile(solution, sys.argv[3])

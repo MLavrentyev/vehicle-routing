@@ -41,6 +41,7 @@ class VRPSolutionMulti(VRPSolution2Op):
             if not route: return self
             node1 = random.randrange(len(route))
             node2 = random.randrange(len(route))
+            if node1 == node2: return self
             if node1 > node2: node1, node2 = node2, node1
             L, M, R = route[:node1], route[node1+1:node2], route[node2+1:]
             new = Route(L+[route[node2]]+M+[route[node1]]+R, self.depot)
@@ -52,6 +53,7 @@ class VRPSolutionMulti(VRPSolution2Op):
             if not route1 or not route2: return self
             node1 = random.randrange(len(route1))
             node2 = random.randrange(len(route2))
+            if node1 == node2: return self
             L1, R1 = route1[:node1], route1[node1+1:]
             L2, R2 = route2[:node2], route2[node2+1:]
             new1 = Route(L1+[route2[node2]]+R1, self.depot)
@@ -71,6 +73,7 @@ class VRPSolutionMulti(VRPSolution2Op):
             if not route: return self
             edge1 = random.randrange(len(route)+1)
             node2 = random.randrange(len(route))
+            if edge1 == node2: return self
             new: Route
             if edge1 < node2:
                 L, M, R = route[:edge1], route[edge1:node2], route[node2+1:]

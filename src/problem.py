@@ -192,6 +192,9 @@ class Route:
 
         return self
 
+    def verify(self) -> bool:
+        return len(self.stops) == len(set(self.stops))
+
 
 class VRPProblem(Problem):
     def __init__(self, numCustomers: int, numTrucks: int, truckCapacity: int, depot: Node, file: str = None):
@@ -393,6 +396,10 @@ class VRPSolution(Solution):
             route.greedyReorder()
 
         return self
+
+    def verify(self) -> bool:
+        nodes = [n.id for n in self.getFullRoute() if n.id]
+        return len(nodes) == len(set(nodes))
 
 
 class VRPSolution2Op(VRPSolution):
