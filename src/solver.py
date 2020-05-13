@@ -174,16 +174,19 @@ class VRPSolver2OpSimAnneal(VRPSolver):
 
         scoreHistory: List[float] = []
         historySize: int = 1000  # speed vs. quality tradeoff (higher value is slower but better solution)
+        historyMin: float = 0
+        historyMax: float = math.inf
+
         numBadSteps: int = 0
         numAccSteps: int = 0
         numSteps: int = 1
 
         distrib = [1.0, 1.0, 1.0]   # OPT2, TAKE, SWAP
-        learn: float = 0.001        # TODO: tune
-        minW: float = 0.0000        # TODO: tune
+        learn: float = 0.003
+        minW: float = 0.25
 
         #  and numAccSteps/numSteps < 0.25
-        while not (numBadSteps >= 5 and currState.isFeasible() and (max(scoreHistory) - min(scoreHistory) < 0.001 * max(scoreHistory))):
+        while not (numBadSteps >= 10 and currState.isFeasible() and len(scoreHistory) == historySize and (historyMax - historyMin < 0.00001 * historyMax)):
 
             op: int
             neighb: VRPSolutionMulti
@@ -203,18 +206,21 @@ class VRPSolver2OpSimAnneal(VRPSolver):
                 scoreHistory.append(currState.objectiveValue)
                 if len(scoreHistory) > historySize:
                     scoreHistory.pop(0)
+                historyMax = max(scoreHistory)
+                historyMin = min(scoreHistory)
 
-            # currState.becomeNeighbor(lambda dobj, dpen: False)
+            currState.becomeNeighbor(lambda dobj, dpen: False)
 
             numSteps += 1
             # Anneal temperature every certain number of steps
             if numSteps % annealingTime == 0:
                 annealingTemp *= annealingSched
+                # distrib = [1.0, 1.0, 1.0]
                 if display:
                     print(f"Annealing temperature. Acceptance rate: {numAccSteps/numSteps:.2f}")
 
             # Check whether it's stuck in an infeasible minimum and jump out
-            if (not currState.isFeasible()) and len(scoreHistory) == historySize and (max(scoreHistory) - min(scoreHistory) < 0.0001 * max(scoreHistory)):
+            if (not currState.isFeasible()) and len(scoreHistory) == historySize and (historyMax - historyMin < 0.0001 * max(scoreHistory)):
                 currState = self.pickRandomSolution()
                 if display:
                     print("Randomizing to new solution.")
@@ -298,7 +304,7 @@ if __name__ == "__main__":
     solution: VRPSolution
     solveTime: float
     solution, solveTime = cast(Tuple[VRPSolution, float],
-                               runMultiProcSolver(solverType.factory, problem, solveArgs=(False, False), numProcs=7))
+                               runMultiProcSolver(solverType.factory, problem, solveArgs=(True, False), numProcs=1))
     # solution, solveTime = cast(VRPSolution, solverType.factory(problem).solve(True, False)), 0 # only for profiling
 
     assert solution.capacityOverflow == 0
